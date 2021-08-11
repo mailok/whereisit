@@ -1,5 +1,6 @@
 import { createMachine } from 'xstate';
 import { createModel } from 'xstate/lib/model';
+import { assertEventType } from '../utils';
 
 const placesAutocompleteModel = createModel(
   {
@@ -13,12 +14,16 @@ const placesAutocompleteModel = createModel(
         value,
         shouldFetch,
       }),
-      RECEIVE_DATA: () => ({}),
+      RECEIVE_DATA: (data: unknown[]) => ({ data }),
+      FETCH_ERROR: (error: string) => ({ error }),
       FETCH: () => ({}),
       CANCEL: () => ({}),
     },
   },
 );
+
+/*type AutocompleteContext = ContextFrom<typeof placesAutocompleteModel>;
+type AutocompleteEvent = EventFrom<typeof placesAutocompleteModel>;*/
 
 const placesAutocompleteMachine = createMachine(
   {
@@ -26,10 +31,6 @@ const placesAutocompleteMachine = createMachine(
     context: placesAutocompleteModel.initialContext,
     states: {
       idle: {
-        on: {
-          FETCH: 'fetching',
-          CHANGE: {},
-        },
         initial: 'noError',
         states: {
           noError: {
@@ -38,23 +39,38 @@ const placesAutocompleteMachine = createMachine(
           errored: {},
         },
       },
+      changing: {
+        after: {
+          500: [
+            {
+              target: 'fetching',
+              cond: 'shouldFetchOnChange',
+            },
+            { target: 'idle' },
+          ],
+        },
+      },
       fetching: {
         on: {
-          FETCH: 'fetching',
           CANCEL: 'idle',
-          RECEIVE_DATA: {
-            target: 'idle',
-            actions: 'assignDataToContext',
-          },
-          CHANGE: {},
         },
         invoke: {
           src: 'fetchData',
+          onDone: {
+            target: 'idle',
+            actions: 'assignDataToContext',
+          },
           onError: {
             target: 'idle.errored',
             actions: 'assignErrorToContext',
           },
         },
+      },
+    },
+    on: {
+      CHANGE: {
+        target: 'changing',
+        actions: ['assignValueToInputValue', 'clearErrorMessage'],
       },
     },
   },
@@ -63,21 +79,30 @@ const placesAutocompleteMachine = createMachine(
       fetchData: () => () => {},
     },
     actions: {
-      assignDataToContext: placesAutocompleteModel.assign({
-        places: (_, event: any) => event.data,
+      assignErrorToContext: (_, event: any) => ({
+        errorMessage: event.error,
       }),
-      assignErrorToContext: placesAutocompleteModel.assign({
-        errorMessage: (_, event: any) => event.data?.message || 'An unknown error occurred',
-      }),
-      clearErrorMessage: placesAutocompleteModel.assign({
-        errorMessage: () => null,
+      assignDataToContext: (_, event) => {
+        assertEventType(event, 'RECEIVE_DATA');
+        return {
+          places: event.data,
+        };
+      },
+      assignValueToInputValue: (_, event) => {
+        assertEventType(event, 'CHANGE');
+        return {
+          inputValue: event.value,
+        };
+      },
+      clearErrorMessage: (_, event: any) => ({
+        errorMessage: null,
       }),
     },
     guards: {
-      /*hasSomeContent: (_, event) => {
-        // debugger;
-        return Boolean(event.value);
-      },*/
+      shouldFetchOnChange: (_, event) => {
+        assertEventType(event, 'CHANGE');
+        return Boolean(event.shouldFetch);
+      },
     },
   },
 );
