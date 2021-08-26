@@ -19,15 +19,14 @@ interface Context {
   inputValue: string;
   places: Place[];
   errorMessage: null | string;
-  isOpen: boolean;
 }
 
 type Event =
-  | { type: 'FETCH' }
   | { type: 'CLEAR' }
-  | { type: 'CANCEL' }
+  | { type: 'FOCUS' }
+  | { type: 'CLOSE_SUGGESTIONS_LIST' }
   | { type: 'CHANGE'; value: string }
-  | { type: 'FETCH_ERROR'; error: string }
+  | { type: 'SELECT_VALUE'; value: string }
   | { type: 'done.invoke.fetchSuggestions'; data: Place[] };
 
 function fetchPlaces(query: string): Promise<Place[]> {
@@ -45,45 +44,47 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       inputValue: '',
       places: [],
       errorMessage: '',
-      isOpen: false,
     },
     states: {
-      idle: {
-        initial: 'noError',
-        entry: ['computeIsOpenValue'],
-        states: {
-          noError: {
-            entry: ['clearErrorMessage'],
-          },
-          errored: {},
-        },
-      },
+      idle: {},
       changing: {
-        entry: ['clearErrorMessage'],
+        entry: ['assignValueToInputValue', 'clearErrorMessage', 'clearPlaces'],
         after: {
           500: 'fetching',
         },
       },
       fetching: {
-        entry: ['closeSuggestionsList'],
         invoke: {
           src: 'fetchSuggestions',
-          onDone: { target: 'idle.noError', actions: 'assignDataToContext' },
+          onDone: [
+            { target: 'showingSuggestionList', actions: ['assignDataToContext'], cond: 'ifResponseHaveAnyPlace' },
+            { target: 'showingEmptyResult' },
+          ],
           onError: {
-            target: 'idle.errored',
+            target: 'showingErrorMessage',
             actions: 'assignErrorToContext',
           },
         },
       },
+      showingSuggestionList: {},
+      showingEmptyResult: {},
+      showingErrorMessage: {},
     },
     on: {
-      CHANGE: {
-        target: 'changing',
-        actions: ['assignValueToInputValue', 'clearErrorMessage'],
-      },
+      CHANGE: 'changing',
       CLEAR: {
-        target: 'idle.noError',
-        actions: ['clearInputValue', 'clearPlaces', 'clearErrorMessage', 'computeIsOpenValue'],
+        target: 'idle',
+        actions: ['clearInputValue', 'clearPlaces', 'clearErrorMessage'],
+      },
+      CLOSE_SUGGESTIONS_LIST: 'idle',
+      FOCUS: [
+        { target: 'fetching', cond: 'ifHaveInputValueAndNoPlace' },
+        { target: 'showingSuggestionList', cond: 'ifContextHaveAnyPlace' },
+        { target: 'idle' },
+      ],
+      SELECT_VALUE: {
+        target: 'idle',
+        actions: ['assignValueToInputValue', 'clearPlaces', 'clearErrorMessage'],
       },
     },
   },
@@ -92,8 +93,8 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       fetchSuggestions: (context) => fetchPlaces(context.inputValue),
     },
     actions: {
-      assignErrorToContext: assign<Context, Event>((context, event) => {
-        if (event.type !== 'FETCH_ERROR') return {};
+      // TODO: quitar el any
+      assignErrorToContext: assign<Context, any>((context, event) => {
         return {
           errorMessage: event.error,
         };
@@ -104,21 +105,9 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
           places: event.data,
         };
       }),
-      computeIsOpenValue: assign<Context, Event>((context) => {
-        return {
-          isOpen: context.places.length > 0,
-        };
-      }),
-      closeSuggestionsList: assign<Context, Event>(() => {
-        return {
-          isOpen: false,
-        };
-      }),
       assignValueToInputValue: assign<Context, Event>((context, event) => {
-        if (event.type !== 'CHANGE') return {};
-        return {
-          inputValue: event.value,
-        };
+        if (event.type === 'CHANGE' || event.type === 'SELECT_VALUE') return { inputValue: event.value };
+        return {};
       }),
       clearErrorMessage: assign<Context, Event>((context, event) => {
         return {
@@ -137,7 +126,21 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
         };
       }),
     },
-    guards: {},
+    guards: {
+      ifDontHaveErrors: (context) => {
+        return !Boolean(context.errorMessage);
+      },
+      ifContextHaveAnyPlace: (context, event) => {
+        return context.places.length > 0;
+      },
+      ifResponseHaveAnyPlace: (context, event) => {
+        if (event.type !== 'done.invoke.fetchSuggestions') return false;
+        return event.data.length > 0;
+      },
+      ifHaveInputValueAndNoPlace: (context, event) => {
+        return Boolean(context.inputValue && !context.places.length);
+      },
+    },
   },
 );
 export default placesAutocompleteMachine;

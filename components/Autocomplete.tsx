@@ -1,21 +1,22 @@
 import {
+  Box,
   List as ChakraList,
-  useColorModeValue,
-  VStack,
   ListItem as ChakraListItem,
+  ListItemProps as ChakraListItemProps,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   SlideFade,
   Text,
-  Box,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  ListItemProps as ChakraListItemProps,
+  useColorModeValue,
+  VStack,
 } from '@chakra-ui/react';
 import { ListProps as NativeListProps } from '@chakra-ui/layout/dist/types/list';
 import { TextProps } from '@chakra-ui/layout/dist/types/text';
 import React, { FC, Key } from 'react';
 import Input, { InputProps } from './Input';
 import useElementWidth from '../hooks/useElementWidth';
+import useOnClickOutside, { AnyEvent } from '../hooks/useOnClickOutside';
 
 export interface Suggestion {
   key: Key;
@@ -25,16 +26,20 @@ export interface Suggestion {
 interface AutocompleteProps extends Omit<InputProps, 'onSelect'> {
   suggestions?: Suggestion[];
   onSelect?: (suggestion: Suggestion) => void;
+  onClickOutside?: (event: AnyEvent) => void;
   isOpen?: boolean;
 }
 
 const Autocomplete: FC<AutocompleteProps> = (props) => {
-  const { suggestions = [], onSelect, isOpen = false, ...inputProps } = props;
+  const { suggestions = [], onSelect, isOpen = false, onClickOutside = () => {}, ...inputProps } = props;
   const ref = React.useRef<HTMLElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const width = useElementWidth(ref!);
 
+  useOnClickOutside(containerRef, onClickOutside);
+
   return (
-    <VStack w="100%" spacing={0} align="stretch">
+    <VStack w="100%" spacing={0} align="stretch" ref={containerRef}>
       <Popover autoFocus={false} isOpen={isOpen} placement="bottom-start">
         <PopoverTrigger>
           {/*// @ts-ignore*/}
@@ -52,7 +57,7 @@ const Autocomplete: FC<AutocompleteProps> = (props) => {
         >
           <List>
             {suggestions.map((suggestion) => (
-              <ListItem key={suggestion.key} onClick={() => onSelect?.(suggestion)}>
+              <ListItem key={suggestion.key} onClick={(event) => onSelect?.(suggestion)}>
                 {suggestion.label}
               </ListItem>
             ))}

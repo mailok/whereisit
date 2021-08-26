@@ -22,7 +22,16 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        <Container h="30vh" w="50%" maxW="container.xs" alignItems="center" display="flex" pt={12}>
+        <Container
+          h="30vh"
+          w="50%"
+          maxW="container.xs"
+          alignItems="center"
+          display="flex"
+          pt={12}
+          /*          border={'1px'}
+          borderColor={'green'}*/
+        >
           <VStack w="100%" spacing={14}>
             <HStack w="100%">
               <IconButton
@@ -44,7 +53,7 @@ export default function Home() {
             </HStack>
             <VStack w="100%" spacing={0}>
               <PlacesAutocomplete />
-              <span>Debajo</span>
+              {/*<span>Debajo</span>*/}
             </VStack>
           </VStack>
         </Container>
