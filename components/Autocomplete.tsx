@@ -13,11 +13,11 @@ import {
 } from '@chakra-ui/react';
 import { ListProps as NativeListProps } from '@chakra-ui/layout/dist/types/list';
 import { TextProps } from '@chakra-ui/layout/dist/types/text';
-import React, { FC, Key, useEffect, useRef } from 'react';
+import React, { FC, Key } from 'react';
 import Input, { InputProps } from './Input';
 import useElementWidth from '../hooks/useElementWidth';
 
-interface Suggestion {
+export interface Suggestion {
   key: Key;
   label: string;
 }

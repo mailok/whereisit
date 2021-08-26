@@ -4,6 +4,7 @@ import { Button, Center, Container, HStack, IconButton, Stack, useColorMode, VSt
 import React, { useState } from 'react';
 import Autocomplete from '../components/Autocomplete';
 import { MoonIcon, PhoneIcon, RepeatIcon, SunIcon } from '@chakra-ui/icons';
+import { PlacesAutocomplete } from '../components/PlacesAutocomplete';
 
 export default function Home() {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -42,18 +43,8 @@ export default function Home() {
               />
             </HStack>
             <VStack w="100%" spacing={0}>
-              <Autocomplete
-                isLoading={isLoading}
-                suggestions={[
-                  { label: 'lorem', key: 1 },
-                  { label: 'ipsum', key: 2 },
-                  { label: 'dolor', key: 3 },
-                  { label: 'sit', key: 4 },
-                ]}
-                onSelect={(suggestion) => console.log('SUggestion:', suggestion)}
-                isOpen
-              />
-              <span>lop</span>
+              <PlacesAutocomplete />
+              <span>Debajo</span>
             </VStack>
           </VStack>
         </Container>

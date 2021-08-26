@@ -1,37 +1,56 @@
-import { createMachine } from 'xstate';
-import { createModel } from 'xstate/lib/model';
-import { assertEventType } from '../utils';
+import { assign, createMachine } from 'xstate';
 
-const placesAutocompleteModel = createModel(
-  {
-    inputValue: '' as string,
-    places: {} as unknown[],
-    errorMessage: null as null | string,
-  },
-  {
-    events: {
-      CHANGE: (value: string, shouldFetch?: boolean) => ({
-        value,
-        shouldFetch,
-      }),
-      RECEIVE_DATA: (data: unknown[]) => ({ data }),
-      FETCH_ERROR: (error: string) => ({ error }),
-      FETCH: () => ({}),
-      CANCEL: () => ({}),
-    },
-  },
-);
+export interface Place {
+  place_id: number;
+  licence: string;
+  osm_type: string;
+  osm_id: any;
+  boundingbox: string[];
+  lat: string;
+  lon: string;
+  display_name: string;
+  class: string;
+  type: string;
+  importance: number;
+  icon: string;
+}
 
-/*type AutocompleteContext = ContextFrom<typeof placesAutocompleteModel>;
-type AutocompleteEvent = EventFrom<typeof placesAutocompleteModel>;*/
+interface Context {
+  inputValue: string;
+  places: Place[];
+  errorMessage: null | string;
+  isOpen: boolean;
+}
 
-const placesAutocompleteMachine = createMachine(
+type Event =
+  | { type: 'FETCH' }
+  | { type: 'CLEAR' }
+  | { type: 'CANCEL' }
+  | { type: 'CHANGE'; value: string }
+  | { type: 'FETCH_ERROR'; error: string }
+  | { type: 'done.invoke.fetchSuggestions'; data: Place[] };
+
+function fetchPlaces(query: string): Promise<Place[]> {
+  return Boolean(query)
+    ? fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query.replaceAll(' ', '+')}`).then((response) =>
+        response.json(),
+      )
+    : Promise.resolve([]);
+}
+
+const placesAutocompleteMachine = createMachine<Context, Event>(
   {
     initial: 'idle',
-    context: placesAutocompleteModel.initialContext,
+    context: {
+      inputValue: '',
+      places: [],
+      errorMessage: '',
+      isOpen: false,
+    },
     states: {
       idle: {
         initial: 'noError',
+        entry: ['computeIsOpenValue'],
         states: {
           noError: {
             entry: ['clearErrorMessage'],
@@ -40,26 +59,16 @@ const placesAutocompleteMachine = createMachine(
         },
       },
       changing: {
+        entry: ['clearErrorMessage'],
         after: {
-          500: [
-            {
-              target: 'fetching',
-              cond: 'shouldFetchOnChange',
-            },
-            { target: 'idle' },
-          ],
+          500: 'fetching',
         },
       },
       fetching: {
-        on: {
-          CANCEL: 'idle',
-        },
+        entry: ['closeSuggestionsList'],
         invoke: {
-          src: 'fetchData',
-          onDone: {
-            target: 'idle',
-            actions: 'assignDataToContext',
-          },
+          src: 'fetchSuggestions',
+          onDone: { target: 'idle.noError', actions: 'assignDataToContext' },
           onError: {
             target: 'idle.errored',
             actions: 'assignErrorToContext',
@@ -72,38 +81,64 @@ const placesAutocompleteMachine = createMachine(
         target: 'changing',
         actions: ['assignValueToInputValue', 'clearErrorMessage'],
       },
+      CLEAR: {
+        target: 'idle.noError',
+        actions: ['clearInputValue', 'clearPlaces', 'clearErrorMessage', 'computeIsOpenValue'],
+      },
     },
   },
   {
     services: {
-      fetchData: () => () => {},
+      fetchSuggestions: (context) => fetchPlaces(context.inputValue),
     },
     actions: {
-      assignErrorToContext: (_, event: any) => ({
-        errorMessage: event.error,
+      assignErrorToContext: assign<Context, Event>((context, event) => {
+        if (event.type !== 'FETCH_ERROR') return {};
+        return {
+          errorMessage: event.error,
+        };
       }),
-      assignDataToContext: (_, event) => {
-        assertEventType(event, 'RECEIVE_DATA');
+      assignDataToContext: assign<Context, Event>((context, event) => {
+        if (event.type !== 'done.invoke.fetchSuggestions') return {};
         return {
           places: event.data,
         };
-      },
-      assignValueToInputValue: (_, event) => {
-        assertEventType(event, 'CHANGE');
+      }),
+      computeIsOpenValue: assign<Context, Event>((context) => {
+        return {
+          isOpen: context.places.length > 0,
+        };
+      }),
+      closeSuggestionsList: assign<Context, Event>(() => {
+        return {
+          isOpen: false,
+        };
+      }),
+      assignValueToInputValue: assign<Context, Event>((context, event) => {
+        if (event.type !== 'CHANGE') return {};
         return {
           inputValue: event.value,
         };
-      },
-      clearErrorMessage: (_, event: any) => ({
-        errorMessage: null,
+      }),
+      clearErrorMessage: assign<Context, Event>((context, event) => {
+        return {
+          errorMessage: null,
+        };
+      }),
+      clearInputValue: assign<Context, Event>((context, event) => {
+        if (event.type !== 'CLEAR') return {};
+        return {
+          inputValue: '',
+        };
+      }),
+      clearPlaces: assign<Context, Event>(() => {
+        return {
+          places: [],
+        };
       }),
     },
-    guards: {
-      shouldFetchOnChange: (_, event) => {
-        assertEventType(event, 'CHANGE');
-        return Boolean(event.shouldFetch);
-      },
-    },
+    guards: {},
   },
 );
 export default placesAutocompleteMachine;
+export type { Context as AutocompleteMachineContext, Event as AutocompleteMachineEvent };
