@@ -48,16 +48,17 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
     states: {
       idle: {},
       changing: {
-        entry: ['assignValueToInputValue', 'clearErrorMessage', 'clearPlaces'],
+        entry: ['assignValueToInputValue'],
         after: {
           500: 'fetching',
         },
       },
       fetching: {
+        entry: ['clearErrorMessage', 'clearPlaces'],
         invoke: {
           src: 'fetchSuggestions',
           onDone: [
-            { target: 'showingSuggestionList', actions: ['assignDataToContext'], cond: 'ifResponseHaveAnyPlace' },
+            { target: 'showingSuggestionList', actions: ['assignDataToContext'], cond: 'responseHasPlaceToShow' },
             { target: 'showingEmptyResult' },
           ],
           onError: {
@@ -76,10 +77,11 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
         target: 'idle',
         actions: ['clearInputValue', 'clearPlaces', 'clearErrorMessage'],
       },
-      CLOSE_SUGGESTIONS_LIST: [{ target: 'idle', cond: 'dontHasAnyErrorReported' }, { target: 'showingErrorMessage' }],
+      CLOSE_SUGGESTIONS_LIST: [{ target: 'showingErrorMessage', cond: 'isAnyErrorReported' }, { target: 'idle' }],
       FOCUS: [
-        { target: 'fetching', cond: 'ifHaveInputValueAndNoPlace' },
-        { target: 'showingSuggestionList', cond: 'ifContextHaveAnyPlace' },
+        { target: 'showingErrorMessage', cond: 'isAnyErrorReported' },
+        { target: 'showingSuggestionList', cond: 'isAnyPlaceToShow' },
+        { target: 'fetching', cond: 'isInputDirty' },
         { target: 'idle' },
       ],
       SELECT_VALUE: {
@@ -127,21 +129,18 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       }),
     },
     guards: {
-      ifDontHaveErrors: (context) => {
-        return !Boolean(context.errorMessage);
-      },
-      ifContextHaveAnyPlace: (context, event) => {
+      isAnyPlaceToShow: (context, event) => {
         return context.places.length > 0;
       },
-      ifResponseHaveAnyPlace: (context, event) => {
+      responseHasPlaceToShow: (context, event) => {
         if (event.type !== 'done.invoke.fetchSuggestions') return false;
         return event.data.length > 0;
       },
-      ifHaveInputValueAndNoPlace: (context, event) => {
-        return Boolean(context.inputValue && !context.places.length);
+      isInputDirty: (context, event) => {
+        return Boolean(context.inputValue);
       },
-      dontHasAnyErrorReported: (context, event) => {
-        return !Boolean(context.errorMessage);
+      isAnyErrorReported: (context, event) => {
+        return Boolean(context.errorMessage);
       },
     },
   },

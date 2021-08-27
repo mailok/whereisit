@@ -10,17 +10,17 @@ import { inspect } from '@xstate/inspect';
 
 type PlacesAutocompleteProps = {};
 
-if (typeof window !== 'undefined') {
+/*if (typeof window !== 'undefined') {
   inspect({
     // options
     // url: 'https://statecharts.io/inspect', // (default)
     iframe: false, // open in new window
   });
-}
+}*/
 
 export const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = (props) => {
   const [state, send] = useMachine<AutocompleteMachineContext, AutocompleteMachineEvent>(placesAutocompleteMachine, {
-    devTools: true,
+    devTools: false,
   });
   console.log(state.value);
 
@@ -37,6 +37,7 @@ export const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = (props) => 
       isOpen={state.matches('showingSuggestionList')}
       placeholder="Enter a place..."
       isInvalid={state.matches('showingErrorMessage')}
+      error={state.context.errorMessage!}
     />
   );
 };

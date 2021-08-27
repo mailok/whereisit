@@ -22,17 +22,8 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        <Container
-          h="30vh"
-          w="50%"
-          maxW="container.xs"
-          alignItems="center"
-          display="flex"
-          pt={12}
-          /*          border={'1px'}
-          borderColor={'green'}*/
-        >
-          <VStack w="100%" spacing={14}>
+        <Container h="100vh" w="100%" maxW="container.xs" display="flex" justifyContent="center" pt={12}>
+          <VStack w="50%" spacing={14}>
             <HStack w="100%">
               <IconButton
                 variant="outline"
@@ -42,19 +33,9 @@ export default function Home() {
                 onClick={toggleColorMode}
                 icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
               />
-              <IconButton
-                variant="outline"
-                colorScheme="teal"
-                aria-label="Call Sage"
-                fontSize="20px"
-                onClick={toggleLoading}
-                icon={<RepeatIcon />}
-              />
             </HStack>
-            <VStack w="100%" spacing={0}>
-              <PlacesAutocomplete />
-              {/*<span>Debajo</span>*/}
-            </VStack>
+            <PlacesAutocomplete />
+            {/*<span>Debajo</span>*/}
           </VStack>
         </Container>
       </main>
