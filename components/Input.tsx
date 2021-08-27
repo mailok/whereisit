@@ -11,6 +11,7 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { Else, If, Then } from './utils';
+import { Search2Icon } from '@chakra-ui/icons';
 
 export interface InputProps extends ChakraInputProps {
   isLoading?: boolean;
@@ -36,16 +37,17 @@ const Input: React.FC<InputProps> = (props) => {
 
   return (
     <InputGroup>
-      <FormControl isInvalid={inputProps.isInvalid}>
+      <FormControl isInvalid={isInvalid}>
         <ChakraInput
           ref={inputRef}
-          variant="filled"
+          variant={isInvalid ? 'outline' : 'filled'}
           focusBorderColor={focusBorderColor}
           errorBorderColor={errorBorderColor}
           color={color}
           {...inputProps}
           onChange={onChange}
           pr="4rem"
+          autocomplete="off"
         />
         <FormErrorMessage>{error}</FormErrorMessage>
       </FormControl>
@@ -69,6 +71,9 @@ const Input: React.FC<InputProps> = (props) => {
             >
               CLEAR
             </Button>
+          </Else>
+          <Else if={!inputHasContent}>
+            <Search2Icon color="gray.400" />
           </Else>
         </If>
       </InputRightElement>

@@ -46,5 +46,6 @@ function fromPlaceToSuggestion(place: Place): Suggestion {
   return {
     key: place.place_id,
     label: place.display_name,
+    iconSrc: place.icon,
   };
 }

@@ -12,7 +12,6 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { ListProps as NativeListProps } from '@chakra-ui/layout/dist/types/list';
-import { TextProps } from '@chakra-ui/layout/dist/types/text';
 import React, { FC, Key } from 'react';
 import Input, { InputProps } from './Input';
 import useElementWidth from '../hooks/useElementWidth';
@@ -21,6 +20,7 @@ import useOnClickOutside, { AnyEvent } from '../hooks/useOnClickOutside';
 export interface Suggestion {
   key: Key;
   label: string;
+  iconSrc?: string;
 }
 
 interface AutocompleteProps extends Omit<InputProps, 'onSelect'> {
@@ -115,17 +115,17 @@ const List: React.FC<ListProps> = (props) => {
  *
  */
 
-interface ListItemProps extends Omit<TextProps, 'onClick'>, Pick<ChakraListItemProps, 'onClick'> {
+interface ListItemProps extends ChakraListItemProps {
   highlight?: boolean;
 }
 
 const ListItem: React.FC<ListItemProps> = (props) => {
-  const { onClick, highlight = false, ...textProps } = props;
+  const { highlight = false, ...othersProps } = props;
   const borderColor = useColorModeValue('white', 'gray.700');
   const hoverColor = useColorModeValue('gray.100', 'gray.900');
   const background = useColorModeValue(highlight ? 'gray.100' : undefined, highlight ? 'gray.900' : undefined);
   const textColor = useColorModeValue(highlight ? 'gray.600' : 'gray.600', 'gray.400');
-  console.log('highlight:', highlight);
+
   return (
     <SlideFade in offsetY="20px">
       <ChakraListItem
@@ -139,10 +139,12 @@ const ListItem: React.FC<ListItemProps> = (props) => {
           borderColor: hoverColor,
           rounded: 'md',
         }}
-        onClick={onClick}
-      >
-        <Text color={textColor} isTruncated {...textProps} ml={1} fontWeight={highlight ? 'bold' : undefined} />
-      </ChakraListItem>
+        as={Text}
+        fontWeight={highlight ? 'bold' : undefined}
+        color={textColor}
+        isTruncated
+        {...othersProps}
+      />
     </SlideFade>
   );
 };
