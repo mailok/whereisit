@@ -38,6 +38,7 @@ export const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = (props) => 
       placeholder="Enter a place..."
       isInvalid={state.matches('showingErrorMessage')}
       error={state.context.errorMessage!}
+      highlightedId={state.context.placeSelected?.place_id}
     />
   );
 };

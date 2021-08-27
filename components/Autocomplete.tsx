@@ -25,13 +25,14 @@ export interface Suggestion {
 
 interface AutocompleteProps extends Omit<InputProps, 'onSelect'> {
   suggestions?: Suggestion[];
+  highlightedId?: number;
   onSelect?: (suggestion: Suggestion) => void;
   onClickOutside?: (event: AnyEvent) => void;
   isOpen?: boolean;
 }
 
 const Autocomplete: FC<AutocompleteProps> = (props) => {
-  const { suggestions = [], onSelect, isOpen = false, onClickOutside = () => {}, ...inputProps } = props;
+  const { suggestions = [], onSelect, isOpen = false, onClickOutside = () => {}, highlightedId, ...inputProps } = props;
   const ref = React.useRef<HTMLElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const width = useElementWidth(ref!);
@@ -57,7 +58,11 @@ const Autocomplete: FC<AutocompleteProps> = (props) => {
         >
           <List>
             {suggestions.map((suggestion) => (
-              <ListItem key={suggestion.key} onClick={(event) => onSelect?.(suggestion)}>
+              <ListItem
+                key={suggestion.key}
+                highlight={highlightedId === suggestion.key}
+                onClick={(event) => onSelect?.(suggestion)}
+              >
                 {suggestion.label}
               </ListItem>
             ))}
@@ -110,13 +115,17 @@ const List: React.FC<ListProps> = (props) => {
  *
  */
 
-interface ListItemProps extends Omit<TextProps, 'onClick'>, Pick<ChakraListItemProps, 'onClick'> {}
+interface ListItemProps extends Omit<TextProps, 'onClick'>, Pick<ChakraListItemProps, 'onClick'> {
+  highlight?: boolean;
+}
 
 const ListItem: React.FC<ListItemProps> = (props) => {
-  const { onClick, ...textProps } = props;
+  const { onClick, highlight = false, ...textProps } = props;
   const borderColor = useColorModeValue('white', 'gray.700');
   const hoverColor = useColorModeValue('gray.100', 'gray.900');
-  const textColor = useColorModeValue('gray.600', 'gray.400');
+  const background = useColorModeValue(highlight ? 'gray.100' : undefined, highlight ? 'gray.900' : undefined);
+  const textColor = useColorModeValue(highlight ? 'gray.600' : 'gray.600', 'gray.400');
+  console.log('highlight:', highlight);
   return (
     <SlideFade in offsetY="20px">
       <ChakraListItem
@@ -124,6 +133,7 @@ const ListItem: React.FC<ListItemProps> = (props) => {
         cursor="pointer"
         border="1px"
         borderColor={borderColor}
+        background={background}
         _hover={{
           background: hoverColor,
           borderColor: hoverColor,
@@ -131,7 +141,7 @@ const ListItem: React.FC<ListItemProps> = (props) => {
         }}
         onClick={onClick}
       >
-        <Text color={textColor} isTruncated {...textProps} ml={1} />
+        <Text color={textColor} isTruncated {...textProps} ml={1} fontWeight={highlight ? 'bold' : undefined} />
       </ChakraListItem>
     </SlideFade>
   );
