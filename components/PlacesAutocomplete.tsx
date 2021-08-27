@@ -36,6 +36,7 @@ export const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = (props) => 
       onClear={() => send({ type: 'CLEAR' })}
       isOpen={state.matches('showingSuggestionList')}
       placeholder="Enter a place..."
+      isInvalid={state.matches('showingErrorMessage')}
     />
   );
 };

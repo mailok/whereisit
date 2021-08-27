@@ -1,15 +1,12 @@
-import React, { ChangeEvent, useRef } from 'react';
+import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
 import {
   Button,
-  InputGroup,
-  InputRightElement,
   Input as ChakraInput,
+  InputGroup,
   InputProps as ChakraInputProps,
+  InputRightElement,
   Spinner,
-  useColorModeValue,
 } from '@chakra-ui/react';
-import { useMachine } from '@xstate/react';
-import inputValueMachine from '../machines/inputValueMachine';
 import { Else, If, Then } from './utils';
 
 export interface InputProps extends ChakraInputProps {
@@ -19,36 +16,41 @@ export interface InputProps extends ChakraInputProps {
 
 const Input: React.FC<InputProps> = (props) => {
   const { isLoading, onClear, ...inputProps } = props;
-  const [state, send] = useMachine(inputValueMachine);
   const inputRef = useRef<HTMLInputElement>(null);
-
   const onChange = (event: ChangeEvent<HTMLInputElement>) => {
-    send('CHANGE', { value: event.target.value });
     inputProps.onChange?.(event);
   };
-
-  const buttonColor = useColorModeValue('gray.400', 'gray.400');
+  const [inputHasContent, setInputHasContent] = useState(false);
+  useEffect(() => {
+    setInputHasContent(Boolean(inputRef?.current?.value));
+  });
+  const stateColor = inputProps.isInvalid ? 'red.300' : 'gray.400';
 
   return (
     <InputGroup>
-      <ChakraInput ref={inputRef} variant="filled" {...inputProps} onChange={onChange} pr="4rem" />
+      <ChakraInput
+        ref={inputRef}
+        variant="filled"
+        focusBorderColor={stateColor}
+        errorBorderColor="red.300"
+        {...inputProps}
+        onChange={onChange}
+        pr="4rem"
+      />
       <InputRightElement width="4rem">
         <If cond={isLoading}>
           <Then>
             <Spinner color="gray.400" />
           </Then>
-          <Else if={state.matches('with_value')}>
+          <Else if={inputHasContent}>
             <Button
               variant="outline"
-              borderColor="gray.400"
+              borderColor={stateColor}
               p={1}
               size="xs"
-              color={buttonColor}
+              color={stateColor}
               onClick={() => {
                 onClear?.();
-                if (onClear) {
-                  send('CHANGE', { value: '' });
-                }
                 inputRef.current?.focus();
               }}
             >

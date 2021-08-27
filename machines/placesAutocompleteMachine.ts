@@ -76,7 +76,7 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
         target: 'idle',
         actions: ['clearInputValue', 'clearPlaces', 'clearErrorMessage'],
       },
-      CLOSE_SUGGESTIONS_LIST: 'idle',
+      CLOSE_SUGGESTIONS_LIST: [{ target: 'idle', cond: 'dontHasAnyErrorReported' }, { target: 'showingErrorMessage' }],
       FOCUS: [
         { target: 'fetching', cond: 'ifHaveInputValueAndNoPlace' },
         { target: 'showingSuggestionList', cond: 'ifContextHaveAnyPlace' },
@@ -84,7 +84,7 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       ],
       SELECT_VALUE: {
         target: 'idle',
-        actions: ['assignValueToInputValue', 'clearPlaces', 'clearErrorMessage'],
+        actions: ['assignValueToInputValue', 'clearErrorMessage'],
       },
     },
   },
@@ -96,7 +96,7 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       // TODO: quitar el any
       assignErrorToContext: assign<Context, any>((context, event) => {
         return {
-          errorMessage: event.error,
+          errorMessage: 'Failed to fetch places',
         };
       }),
       assignDataToContext: assign<Context, Event>((context, event) => {
@@ -139,6 +139,9 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       },
       ifHaveInputValueAndNoPlace: (context, event) => {
         return Boolean(context.inputValue && !context.places.length);
+      },
+      dontHasAnyErrorReported: (context, event) => {
+        return !Boolean(context.errorMessage);
       },
     },
   },
