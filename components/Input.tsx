@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
+import React, { ChangeEvent, forwardRef, useEffect, useRef, useState } from 'react';
 import {
   Button,
   FormControl,
@@ -19,7 +19,7 @@ export interface InputProps extends ChakraInputProps {
   error?: string;
 }
 
-const Input: React.FC<InputProps> = (props) => {
+const Input = forwardRef<HTMLInputElement, InputProps>((props, ref) => {
   const { isLoading, error, onClear, ...inputProps } = props;
   const isInvalid = inputProps.isInvalid;
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,7 +28,11 @@ const Input: React.FC<InputProps> = (props) => {
   };
   const [inputHasContent, setInputHasContent] = useState(false);
   useEffect(() => {
-    setInputHasContent(Boolean(inputRef?.current?.value));
+    if (ref !== null) {
+      setInputHasContent(Boolean((ref as any)?.current?.value));
+    } else {
+      setInputHasContent(Boolean(inputRef?.current?.value));
+    }
   });
 
   const color = useColorModeValue(isInvalid ? 'red.500' : 'gray.500', isInvalid ? 'red.300' : 'gray.300');
@@ -39,7 +43,7 @@ const Input: React.FC<InputProps> = (props) => {
     <InputGroup>
       <FormControl isInvalid={isInvalid}>
         <ChakraInput
-          ref={inputRef}
+          ref={ref ? ref : inputRef}
           variant={isInvalid ? 'outline' : 'filled'}
           focusBorderColor={focusBorderColor}
           errorBorderColor={errorBorderColor}
@@ -66,7 +70,11 @@ const Input: React.FC<InputProps> = (props) => {
               color={color}
               onClick={() => {
                 onClear?.();
-                inputRef.current?.focus();
+                if (ref !== null) {
+                  (ref as any)?.current?.focus();
+                } else {
+                  inputRef.current?.focus();
+                }
               }}
             >
               CLEAR
@@ -79,6 +87,7 @@ const Input: React.FC<InputProps> = (props) => {
       </InputRightElement>
     </InputGroup>
   );
-};
+});
 
+Input.displayName = 'Input';
 export default Input;

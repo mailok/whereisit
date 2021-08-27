@@ -31,14 +31,16 @@ export const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = (props) => 
       suggestions={state.context.places.map(fromPlaceToSuggestion)}
       onChange={(event) => send({ type: 'CHANGE', value: event.target.value })}
       onSelect={(suggestion) => send({ type: 'SELECT_SUGGESTION', placeId: Number(suggestion.key) })}
-      onClickOutside={() => send({ type: 'CLOSE_SUGGESTIONS_LIST' })}
-      onFocus={() => send({ type: 'FOCUS' })}
+      onClickOutside={() => send({ type: 'CLICK_OUTSIDE' })}
+      onFocus={(event) => send({ type: 'FOCUS' })}
+      onClick={(event) => send({ type: 'INPUT_CLICK' })}
       onClear={() => send({ type: 'CLEAR' })}
       isOpen={state.matches('showingSuggestionList')}
       placeholder="Enter a place..."
       isInvalid={state.matches('showingErrorMessage')}
       error={state.context.errorMessage!}
       highlightedId={state.context.placeSelected?.place_id}
+      focusOnSelect={state.context.config.focusOnSelect}
     />
   );
 };

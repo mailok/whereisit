@@ -29,11 +29,21 @@ interface AutocompleteProps extends Omit<InputProps, 'onSelect'> {
   onSelect?: (suggestion: Suggestion) => void;
   onClickOutside?: (event: AnyEvent) => void;
   isOpen?: boolean;
+  focusOnSelect?: boolean;
 }
 
 const Autocomplete: FC<AutocompleteProps> = (props) => {
-  const { suggestions = [], onSelect, isOpen = false, onClickOutside = () => {}, highlightedId, ...inputProps } = props;
+  const {
+    suggestions = [],
+    onSelect,
+    isOpen = false,
+    focusOnSelect = true,
+    onClickOutside = () => {},
+    highlightedId,
+    ...inputProps
+  } = props;
   const ref = React.useRef<HTMLElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const width = useElementWidth(ref!);
 
@@ -45,7 +55,7 @@ const Autocomplete: FC<AutocompleteProps> = (props) => {
         <PopoverTrigger>
           {/*// @ts-ignore*/}
           <Box w="100%" ref={ref}>
-            <Input {...inputProps} />
+            <Input {...inputProps} ref={inputRef} />
           </Box>
         </PopoverTrigger>
         <PopoverContent
@@ -61,7 +71,12 @@ const Autocomplete: FC<AutocompleteProps> = (props) => {
               <ListItem
                 key={suggestion.key}
                 highlight={highlightedId === suggestion.key}
-                onClick={(event) => onSelect?.(suggestion)}
+                onClick={(event) => {
+                  onSelect?.(suggestion);
+                  if (focusOnSelect) {
+                    inputRef?.current?.focus();
+                  }
+                }}
               >
                 {suggestion.label}
               </ListItem>

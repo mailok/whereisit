@@ -15,18 +15,25 @@ export interface Place {
   icon: string;
 }
 
+export interface Config {
+  focusOnSelect?: boolean;
+}
+
 interface Context {
   inputValue: string;
   places: Place[];
   placeSelected: Place | null;
   errorMessage: null | string;
+  config: Config;
 }
 
 type Event =
   | { type: 'CLEAR' }
   | { type: 'FOCUS' }
-  | { type: 'CLOSE_SUGGESTIONS_LIST' }
+  | { type: 'CLICK_OUTSIDE' }
+  | { type: 'INPUT_CLICK' }
   | { type: 'CHANGE'; value: string }
+  | { type: 'CHANGE_CONFIG'; config: Partial<Config> }
   | { type: 'SELECT_SUGGESTION'; placeId: number }
   | { type: 'done.invoke.fetchSuggestions'; data: Place[] };
 
@@ -46,9 +53,21 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       places: [],
       errorMessage: '',
       placeSelected: null,
+      config: {
+        focusOnSelect: true,
+      },
     },
     states: {
-      idle: {},
+      idle: {
+        on: {
+          FOCUS: [
+            { target: 'showingErrorMessage', cond: 'isAnyErrorReported' },
+            { target: 'showingSuggestionList', cond: 'isAnyPlaceToShow' },
+            { target: 'fetching', cond: 'isInputDirty' },
+            { target: 'idle' },
+          ],
+        },
+      },
       changing: {
         entry: ['assignValueToInputValue', 'clearSelection'],
         after: {
@@ -69,9 +88,30 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
           },
         },
       },
-      showingSuggestionList: {},
+      showingSuggestionList: {
+        on: {
+          CLICK_OUTSIDE: [{ target: 'showingErrorMessage', cond: 'isAnyErrorReported' }, { target: 'idle' }],
+          SELECT_SUGGESTION: [
+            {
+              target: 'showingSelection',
+              actions: ['assignSelection', 'clearErrorMessage'],
+            },
+          ],
+        },
+      },
       showingEmptyResult: {},
       showingErrorMessage: {},
+      showingSelection: {
+        on: {
+          INPUT_CLICK: [
+            { target: 'showingErrorMessage', cond: 'isAnyErrorReported' },
+            { target: 'showingSuggestionList', cond: 'isAnyPlaceToShow' },
+            { target: 'fetching', cond: 'isInputDirty' },
+            { target: 'idle' },
+          ],
+          CLICK_OUTSIDE: [{ target: 'showingErrorMessage', cond: 'isAnyErrorReported' }, { target: 'idle' }],
+        },
+      },
     },
     on: {
       CHANGE: 'changing',
@@ -79,17 +119,7 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
         target: 'idle',
         actions: ['clearInputValue', 'clearPlaces', 'clearErrorMessage', 'clearSelection'],
       },
-      CLOSE_SUGGESTIONS_LIST: [{ target: 'showingErrorMessage', cond: 'isAnyErrorReported' }, { target: 'idle' }],
-      FOCUS: [
-        { target: 'showingErrorMessage', cond: 'isAnyErrorReported' },
-        { target: 'showingSuggestionList', cond: 'isAnyPlaceToShow' },
-        { target: 'fetching', cond: 'isInputDirty' },
-        { target: 'idle' },
-      ],
-      SELECT_SUGGESTION: {
-        target: 'idle',
-        actions: ['assignSelection', 'clearErrorMessage'],
-      },
+      CHANGE_CONFIG: { actions: ['assignConfigToContext'] },
     },
   },
   {
@@ -123,6 +153,12 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
             inputValue: '',
             placeSelected: null,
           };
+      }),
+      assignConfigToContext: assign<Context, Event>((context, event) => {
+        if (event.type !== 'CHANGE_CONFIG') return {};
+        return {
+          config: { ...context.config, ...event.config },
+        };
       }),
       clearSelection: assign<Context, Event>((context, event) => {
         return {
@@ -159,6 +195,9 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       },
       isAnyErrorReported: (context, event) => {
         return Boolean(context.errorMessage);
+      },
+      shouldFocusOnSelect: (context, event) => {
+        return Boolean(context.config.focusOnSelect);
       },
     },
   },
