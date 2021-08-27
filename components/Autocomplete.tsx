@@ -48,7 +48,7 @@ const Autocomplete: FC<AutocompleteProps> = (props) => {
           </Box>
         </PopoverTrigger>
         <PopoverContent
-          width={width}
+          width={width - 2}
           mt="-7px"
           border="0"
           _focus={{
@@ -114,8 +114,8 @@ interface ListItemProps extends Omit<TextProps, 'onClick'>, Pick<ChakraListItemP
 const ListItem: React.FC<ListItemProps> = (props) => {
   const { onClick, ...textProps } = props;
   const borderColor = useColorModeValue('white', 'gray.700');
-  const hoverBackgroundColor = useColorModeValue('gray.100', 'gray.900');
-  const hoverBorderColor = useColorModeValue('gray.100', 'gray.900');
+  const hoverColor = useColorModeValue('gray.100', 'gray.900');
+  const textColor = useColorModeValue('gray.600', 'gray.400');
   return (
     <SlideFade in offsetY="20px">
       <ChakraListItem
@@ -124,13 +124,13 @@ const ListItem: React.FC<ListItemProps> = (props) => {
         border="1px"
         borderColor={borderColor}
         _hover={{
-          background: hoverBackgroundColor,
-          borderColor: hoverBorderColor,
+          background: hoverColor,
+          borderColor: hoverColor,
           rounded: 'md',
         }}
         onClick={onClick}
       >
-        <Text color="gray.400" isTruncated {...textProps} ml={1} />
+        <Text color={textColor} isTruncated {...textProps} ml={1} />
       </ChakraListItem>
     </SlideFade>
   );

@@ -6,6 +6,7 @@ import {
   Input as ChakraInput,
   InputProps as ChakraInputProps,
   Spinner,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { useMachine } from '@xstate/react';
 import inputValueMachine from '../machines/inputValueMachine';
@@ -26,10 +27,12 @@ const Input: React.FC<InputProps> = (props) => {
     inputProps.onChange?.(event);
   };
 
+  const buttonColor = useColorModeValue('gray.400', 'gray.400');
+
   return (
     <InputGroup>
-      <ChakraInput ref={inputRef} variant="filled" {...inputProps} onChange={onChange} />
-      <InputRightElement width="60px">
+      <ChakraInput ref={inputRef} variant="filled" {...inputProps} onChange={onChange} pr="4rem" />
+      <InputRightElement width="4rem">
         <If cond={isLoading}>
           <Then>
             <Spinner color="gray.400" />
@@ -40,7 +43,7 @@ const Input: React.FC<InputProps> = (props) => {
               borderColor="gray.400"
               p={1}
               size="xs"
-              color="gray.400"
+              color={buttonColor}
               onClick={() => {
                 onClear?.();
                 if (onClear) {
