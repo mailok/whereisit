@@ -80,6 +80,7 @@ interface ListProps extends NativeListProps {}
 
 const List: React.FC<ListProps> = (props) => {
   const hoverBorderColor = useColorModeValue('#EDF2F7', '#171923');
+
   return (
     <ChakraList
       overflowX="auto"
@@ -97,7 +98,7 @@ const List: React.FC<ListProps> = (props) => {
       }}
       boxShadow="xl"
       rounded="md"
-      maxH={500}
+      maxH={300}
       {...props}
     />
   );
