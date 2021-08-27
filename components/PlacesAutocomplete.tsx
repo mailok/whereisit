@@ -22,7 +22,7 @@ export const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = (props) => 
   const [state, send] = useMachine<AutocompleteMachineContext, AutocompleteMachineEvent>(placesAutocompleteMachine, {
     devTools: false,
   });
-  console.log(state.value);
+  console.log({ value: state.value, selected: state.context.placeSelected });
 
   return (
     <Autocomplete
@@ -30,7 +30,7 @@ export const PlacesAutocomplete: React.FC<PlacesAutocompleteProps> = (props) => 
       isLoading={state.matches('fetching')}
       suggestions={state.context.places.map(fromPlaceToSuggestion)}
       onChange={(event) => send({ type: 'CHANGE', value: event.target.value })}
-      onSelect={(suggestion) => send({ type: 'SELECT_VALUE', value: suggestion.label })}
+      onSelect={(suggestion) => send({ type: 'SELECT_SUGGESTION', placeId: Number(suggestion.key) })}
       onClickOutside={() => send({ type: 'CLOSE_SUGGESTIONS_LIST' })}
       onFocus={() => send({ type: 'FOCUS' })}
       onClear={() => send({ type: 'CLEAR' })}

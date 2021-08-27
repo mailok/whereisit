@@ -18,6 +18,7 @@ export interface Place {
 interface Context {
   inputValue: string;
   places: Place[];
+  placeSelected: Place | null;
   errorMessage: null | string;
 }
 
@@ -26,7 +27,7 @@ type Event =
   | { type: 'FOCUS' }
   | { type: 'CLOSE_SUGGESTIONS_LIST' }
   | { type: 'CHANGE'; value: string }
-  | { type: 'SELECT_VALUE'; value: string }
+  | { type: 'SELECT_SUGGESTION'; placeId: number }
   | { type: 'done.invoke.fetchSuggestions'; data: Place[] };
 
 function fetchPlaces(query: string): Promise<Place[]> {
@@ -44,11 +45,12 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       inputValue: '',
       places: [],
       errorMessage: '',
+      placeSelected: null,
     },
     states: {
       idle: {},
       changing: {
-        entry: ['assignValueToInputValue'],
+        entry: ['assignValueToInputValue', 'clearSelection'],
         after: {
           500: 'fetching',
         },
@@ -75,7 +77,7 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
       CHANGE: 'changing',
       CLEAR: {
         target: 'idle',
-        actions: ['clearInputValue', 'clearPlaces', 'clearErrorMessage'],
+        actions: ['clearInputValue', 'clearPlaces', 'clearErrorMessage', 'clearSelection'],
       },
       CLOSE_SUGGESTIONS_LIST: [{ target: 'showingErrorMessage', cond: 'isAnyErrorReported' }, { target: 'idle' }],
       FOCUS: [
@@ -84,9 +86,9 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
         { target: 'fetching', cond: 'isInputDirty' },
         { target: 'idle' },
       ],
-      SELECT_VALUE: {
+      SELECT_SUGGESTION: {
         target: 'idle',
-        actions: ['assignValueToInputValue', 'clearErrorMessage'],
+        actions: ['assignSelection', 'clearErrorMessage'],
       },
     },
   },
@@ -108,8 +110,24 @@ const placesAutocompleteMachine = createMachine<Context, Event>(
         };
       }),
       assignValueToInputValue: assign<Context, Event>((context, event) => {
-        if (event.type === 'CHANGE' || event.type === 'SELECT_VALUE') return { inputValue: event.value };
-        return {};
+        if (event.type !== 'CHANGE') return {};
+        return { inputValue: event.value };
+      }),
+      assignSelection: assign<Context, Event>((context, event) => {
+        if (event.type !== 'SELECT_SUGGESTION') return {};
+        const place = context.places.find((place) => place.place_id === event.placeId);
+        if (place) {
+          return { inputValue: place.display_name, placeSelected: place };
+        } else
+          return {
+            inputValue: '',
+            placeSelected: null,
+          };
+      }),
+      clearSelection: assign<Context, Event>((context, event) => {
+        return {
+          placeSelected: null,
+        };
       }),
       clearErrorMessage: assign<Context, Event>((context, event) => {
         return {

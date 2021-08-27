@@ -98,7 +98,7 @@ const List: React.FC<ListProps> = (props) => {
       }}
       boxShadow="xl"
       rounded="md"
-      maxH={300}
+      maxH={500}
       {...props}
     />
   );
