@@ -12,20 +12,15 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { ListProps as NativeListProps } from '@chakra-ui/layout/dist/types/list';
-import React, { FC, Key } from 'react';
+import React, { FC } from 'react';
 import Input, { InputProps } from './Input';
 import useElementWidth from '../hooks/useElementWidth';
 import useOnClickOutside, { AnyEvent } from '../hooks/useOnClickOutside';
-
-export interface Suggestion {
-  key: Key;
-  label: string;
-  iconSrc?: string;
-}
+import { Suggestion } from '../machines/searchBoxMachine';
 
 interface AutocompleteProps extends Omit<InputProps, 'onSelect'> {
   suggestions?: Suggestion[];
-  highlightedId?: number;
+  highlightedId?: number | string;
   onSelect?: (suggestion: Suggestion) => void;
   onClickOutside?: (event: AnyEvent) => void;
   isOpen?: boolean;
@@ -69,8 +64,8 @@ const Autocomplete: FC<AutocompleteProps> = (props) => {
           <List>
             {suggestions.map((suggestion) => (
               <ListItem
-                key={suggestion.key}
-                highlight={highlightedId === suggestion.key}
+                key={suggestion.id}
+                highlight={highlightedId === suggestion.id}
                 onClick={(event) => {
                   onSelect?.(suggestion);
                   if (focusOnSelect) {

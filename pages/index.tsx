@@ -1,17 +1,13 @@
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
-import { Button, Center, Container, HStack, IconButton, Stack, useColorMode, VStack } from '@chakra-ui/react';
-import React, { useState } from 'react';
-import Autocomplete from '../components/Autocomplete';
-import { MoonIcon, PhoneIcon, RepeatIcon, SunIcon } from '@chakra-ui/icons';
-import { PlacesAutocomplete } from '../components/PlacesAutocomplete';
+import { Container, HStack, IconButton, useColorMode, VStack } from '@chakra-ui/react';
+import React from 'react';
+import { MoonIcon, SunIcon } from '@chakra-ui/icons';
+import SearchBox from '../components/SearchBox';
+import { Suggestion } from '../machines/searchBoxMachine';
 
 export default function Home() {
   const { colorMode, toggleColorMode } = useColorMode();
-  const [isLoading, setLoading] = useState(false);
-  const toggleLoading = () => {
-    setLoading(!isLoading);
-  };
 
   return (
     <div className={styles.container}>
@@ -34,8 +30,7 @@ export default function Home() {
                 icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
               />
             </HStack>
-            <PlacesAutocomplete />
-            {/*<span>Debajo</span>*/}
+            <SearchBox fetchHandler={fetchPlaces} mapResultToSuggestion={fromPlaceToSuggestion} />
           </VStack>
         </Container>
       </main>
@@ -43,4 +38,34 @@ export default function Home() {
       <footer className={styles.footer} />
     </div>
   );
+}
+
+interface Place {
+  place_id: number;
+  licence: string;
+  osm_type: string;
+  osm_id: any;
+  boundingbox: string[];
+  lat: string;
+  lon: string;
+  display_name: string;
+  class: string;
+  type: string;
+  importance: number;
+  icon: string;
+}
+
+function fetchPlaces(query: string): Promise<Place[]> {
+  return Boolean(query)
+    ? fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query.replaceAll(' ', '+')}`).then((response) =>
+        response.json(),
+      )
+    : Promise.resolve([]);
+}
+
+function fromPlaceToSuggestion(place: Place): Suggestion {
+  return {
+    id: place.place_id,
+    label: place.display_name,
+  };
 }
