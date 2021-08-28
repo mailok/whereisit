@@ -1,13 +1,19 @@
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
-import { Container, HStack, IconButton, useColorMode, VStack } from '@chakra-ui/react';
-import React from 'react';
+import { Code, Container, HStack, IconButton, Stack, Switch, Text, useColorMode, VStack } from '@chakra-ui/react';
+import React, { useEffect, useState } from 'react';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 import SearchBox from '../components/SearchBox';
-import { Suggestion } from '../machines/searchBoxMachine';
+import { Config, Suggestion } from '../machines/searchBoxMachine';
 
 export default function Home() {
   const { colorMode, toggleColorMode } = useColorMode();
+  const [config, setConfig] = useState<Config>({ focusOnSelect: false });
+  const [focusOnSelect, setFocusOnSelect] = useState('off');
+
+  useEffect(() => {
+    setConfig({ focusOnSelect: focusOnSelect === 'on' });
+  }, [focusOnSelect]);
 
   return (
     <div className={styles.container}>
@@ -20,7 +26,7 @@ export default function Home() {
       <main className={styles.main}>
         <Container h="100vh" w="100%" maxW="container.xs" display="flex" justifyContent="center" pt={12}>
           <VStack w="50%" spacing={14}>
-            <HStack w="100%">
+            <HStack w="100%" spacing={5}>
               <IconButton
                 variant="outline"
                 colorScheme="teal"
@@ -29,8 +35,21 @@ export default function Home() {
                 onClick={toggleColorMode}
                 icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
               />
+              <Stack direction="column">
+                <Code>focusOnSelect</Code>
+                <Switch
+                  colorScheme="teal"
+                  size="md"
+                  value={focusOnSelect}
+                  onChange={() => setFocusOnSelect((prevState) => (prevState === 'on' ? 'off' : 'on'))}
+                />
+              </Stack>
             </HStack>
-            <SearchBox fetchHandler={fetchPlaces} mapResultToSuggestion={fromPlaceToSuggestion} />
+            <SearchBox
+              fetchHandler={fetchPlaces}
+              mapResultToSuggestion={fromPlaceToSuggestion}
+              focusOnSelect={config.focusOnSelect}
+            />
           </VStack>
         </Container>
       </main>

@@ -38,7 +38,7 @@ const searchBoxMachine = createMachine<Context, Event>(
       errorMessage: '',
       selected: null,
       config: {
-        focusOnSelect: true,
+        focusOnSelect: false,
       },
     },
     states: {
@@ -46,6 +46,7 @@ const searchBoxMachine = createMachine<Context, Event>(
         initial: 'unfocused',
         states: {
           unfocused: {
+            id: 'unfocused',
             initial: 'idle',
             states: {
               idle: {},
@@ -94,10 +95,14 @@ const searchBoxMachine = createMachine<Context, Event>(
               errored: {},
               waitingSelection: {
                 on: {
-                  SELECT: {
-                    target: 'suggestionSelected',
-                    actions: ['assignSelectionToSelected', 'clearErrorMessage'],
-                  },
+                  SELECT: [
+                    {
+                      cond: 'shouldFocusOnSelect',
+                      target: 'suggestionSelected',
+                      actions: ['assignSelectionToSelected', 'clearErrorMessage'],
+                    },
+                    { target: '#unfocused.idle', actions: ['assignSelectionToSelected', 'clearErrorMessage'] },
+                  ],
                 },
               },
               suggestionSelected: {

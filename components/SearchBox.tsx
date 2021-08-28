@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMachine } from '@xstate/react';
 import searchBoxMachine, { Suggestion } from '../machines/searchBoxMachine';
 import Autocomplete from './Autocomplete';
@@ -7,6 +7,7 @@ import { Badge, VStack } from '@chakra-ui/react';
 interface SearchBoxProps {
   fetchHandler: (query: string) => Promise<any>;
   mapResultToSuggestion: (value: any) => Suggestion;
+  focusOnSelect?: boolean;
 }
 
 const SearchBox: React.FC<SearchBoxProps> = (props) => {
@@ -25,6 +26,10 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
     { enabled: { focused: 'errored' } },
   ].some(state.matches);
 
+  useEffect(() => {
+    send({ type: 'CHANGE_CONFIG', config: { focusOnSelect: props.focusOnSelect } });
+  }, [props.focusOnSelect]);
+
   // TODO: Eliminar esto
   const colorSchema = state.matches({ enabled: { focused: 'changing' } })
     ? 'orange'
@@ -35,7 +40,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
     : state.matches({ enabled: { focused: 'suggestionSelected' } })
     ? 'purple'
     : state.matches({ enabled: { focused: 'showingEmptyResult' } })
-    ? 'blackAlpha'
+    ? 'pink'
     : isInvalid
     ? 'red'
     : undefined;
