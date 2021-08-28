@@ -18,18 +18,23 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
     },
   });
 
-  const isInvalid = [{ enable: { focused: 'errored' } }, { enable: { unfocused: 'errored' } }].some(state.matches);
+  const isInvalid = [{ enabled: { focused: 'errored' } }, { enabled: { unfocused: 'errored' } }].some(state.matches);
+  const isOpen = [
+    { enabled: { focused: 'waitingSelection' } },
+    { enabled: { focused: 'showingEmptyResult' } },
+    { enabled: { focused: 'errored' } },
+  ].some(state.matches);
 
   // TODO: Eliminar esto
-  const colorSchema = state.matches({ enable: { focused: 'changing' } })
+  const colorSchema = state.matches({ enabled: { focused: 'changing' } })
     ? 'orange'
-    : state.matches({ enable: { focused: 'fetching' } })
+    : state.matches({ enabled: { focused: 'fetching' } })
     ? 'teal'
-    : state.matches({ enable: { focused: 'waitingSelection' } })
+    : state.matches({ enabled: { focused: 'waitingSelection' } })
     ? 'yellow'
-    : state.matches({ enable: { focused: 'suggestionSelected' } })
+    : state.matches({ enabled: { focused: 'suggestionSelected' } })
     ? 'purple'
-    : state.matches({ enable: { focused: 'showingEmptyResult' } })
+    : state.matches({ enabled: { focused: 'showingEmptyResult' } })
     ? 'blackAlpha'
     : isInvalid
     ? 'red'
@@ -40,7 +45,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
       <Badge colorScheme={colorSchema}>{JSON.stringify(state.value, null, 2)}</Badge>
       <Autocomplete
         value={state.context.query}
-        isLoading={state.matches({ enable: { focused: 'fetching' } })}
+        isLoading={state.matches({ enabled: { focused: 'fetching' } })}
         suggestions={state.context.suggestions}
         onChange={(event) => send({ type: 'CHANGE', value: event.target.value })}
         onSelect={(suggestion) => send({ type: 'SELECT', id: Number(suggestion.id) })}
@@ -48,7 +53,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
         onFocus={(event) => send({ type: 'FOCUS' })}
         onClick={(event) => send({ type: 'CLICK' })}
         onClear={() => send({ type: 'CLEAR' })}
-        isOpen={state.matches({ enable: { focused: 'waitingSelection' } })}
+        isOpen={isOpen}
         placeholder="Enter a query..."
         isInvalid={isInvalid}
         error={state.context.errorMessage!}

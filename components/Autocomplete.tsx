@@ -17,6 +17,7 @@ import Input, { InputProps } from './Input';
 import useElementWidth from '../hooks/useElementWidth';
 import useOnClickOutside, { AnyEvent } from '../hooks/useOnClickOutside';
 import { Suggestion } from '../machines/searchBoxMachine';
+import { Else, If, Then } from './utils';
 
 interface AutocompleteProps extends Omit<InputProps, 'onSelect'> {
   suggestions?: Suggestion[];
@@ -62,20 +63,30 @@ const Autocomplete: FC<AutocompleteProps> = (props) => {
           }}
         >
           <List>
-            {suggestions.map((suggestion) => (
-              <ListItem
-                key={suggestion.id}
-                highlight={highlightedId === suggestion.id}
-                onClick={(event) => {
-                  onSelect?.(suggestion);
-                  if (focusOnSelect) {
-                    inputRef?.current?.focus();
-                  }
-                }}
-              >
-                {suggestion.label}
-              </ListItem>
-            ))}
+            <If cond={suggestions.length > 0}>
+              <Then>
+                {suggestions.map((suggestion) => (
+                  <ListItem
+                    key={suggestion.id}
+                    highlight={highlightedId === suggestion.id}
+                    onClick={(event) => {
+                      onSelect?.(suggestion);
+                      if (focusOnSelect) {
+                        inputRef?.current?.focus();
+                      }
+                    }}
+                  >
+                    {suggestion.label}
+                  </ListItem>
+                ))}
+              </Then>
+              <Else if={!inputProps.isInvalid}>
+                <ListItem>No results were found!</ListItem>
+              </Else>
+              <Else if={inputProps.isInvalid}>
+                <ListItemErrored>{inputProps.error}</ListItemErrored>
+              </Else>
+            </If>
           </List>
         </PopoverContent>
       </Popover>
@@ -154,6 +165,29 @@ const ListItem: React.FC<ListItemProps> = (props) => {
         color={textColor}
         isTruncated
         {...othersProps}
+      />
+    </SlideFade>
+  );
+};
+
+const ListItemErrored: React.FC = (props) => {
+  const borderColor = useColorModeValue('red.500', 'red.300');
+  const background = useColorModeValue('red.100', 'gray.900');
+  const textColor = useColorModeValue('red.500', 'red.300');
+
+  return (
+    <SlideFade in offsetY="20px">
+      <ChakraListItem
+        p="3"
+        cursor="pointer"
+        border="1px"
+        borderColor={borderColor}
+        background={background}
+        as={Text}
+        color={textColor}
+        borderRadius={6}
+        isTruncated
+        {...props}
       />
     </SlideFade>
   );

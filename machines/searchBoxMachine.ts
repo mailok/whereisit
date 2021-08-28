@@ -31,7 +31,7 @@ type Event =
 
 const searchBoxMachine = createMachine<Context, Event>(
   {
-    initial: 'enable',
+    initial: 'enabled',
     context: {
       query: '',
       suggestions: [],
@@ -42,7 +42,7 @@ const searchBoxMachine = createMachine<Context, Event>(
       },
     },
     states: {
-      enable: {
+      enabled: {
         initial: 'unfocused',
         states: {
           unfocused: {
@@ -85,7 +85,10 @@ const searchBoxMachine = createMachine<Context, Event>(
               changing: {
                 entry: ['assignChangeToQuery', 'clearSelection'],
                 after: {
-                  500: [{ target: 'fetching', cond: 'hasAnyQueryForFetch' }, { target: 'idle' }],
+                  500: [
+                    { target: 'fetching', cond: 'hasAnyQueryForFetch' },
+                    { target: 'idle', actions: 'clearErrorMessage' },
+                  ],
                 },
               },
               errored: {},
@@ -115,7 +118,7 @@ const searchBoxMachine = createMachine<Context, Event>(
     },
     on: {
       CLEAR: {
-        target: 'enable.focused.idle',
+        target: 'enabled.focused.idle',
         actions: ['clearQueryValue', 'clearSuggestions', 'clearErrorMessage', 'clearSelection'],
       },
       CHANGE_CONFIG: { actions: ['assignConfigToContext'] },

@@ -53,7 +53,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>((props, ref) => {
           pr="4rem"
           autocomplete="off"
         />
-        <FormErrorMessage>{error}</FormErrorMessage>
+        {/*<FormErrorMessage>{error}</FormErrorMessage>*/}
       </FormControl>
 
       <InputRightElement width="4rem">
