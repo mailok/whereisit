@@ -17,6 +17,9 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
         props.fetchHandler(context.query).then((response) => response.map(props.mapResultToSuggestion)),
     },
   });
+
+  const isInvalid = [{ enable: { focused: 'errored' } }, { enable: { unfocused: 'errored' } }].some(state.matches);
+
   // TODO: Eliminar esto
   const colorSchema = state.matches({ enable: { focused: 'changing' } })
     ? 'orange'
@@ -28,9 +31,10 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
     ? 'purple'
     : state.matches({ enable: { focused: 'showingEmptyResult' } })
     ? 'blackAlpha'
+    : isInvalid
+    ? 'red'
     : undefined;
 
-  const isInvalid = [{ enable: { focused: 'errored' } }, { enable: { unfocused: 'errored' } }].some(state.matches);
   return (
     <VStack w={'100%'} spacing={10}>
       <Badge colorScheme={colorSchema}>{JSON.stringify(state.value, null, 2)}</Badge>
