@@ -1,4 +1,13 @@
 import { assign, createMachine } from 'xstate';
+import { inspect } from '@xstate/inspect';
+
+if (typeof window !== 'undefined') {
+  inspect({
+    // options
+    url: 'https://stately.ai/viz?inspect',
+    iframe: false, // open in new window
+  });
+}
 
 export interface Suggestion {
   id: number | string;
@@ -66,7 +75,6 @@ const searchBoxMachine = createMachine<Context, Event>(
             states: {
               idle: {},
               fetching: {
-                entry: ['clearErrorMessage', 'clearSuggestions'],
                 invoke: {
                   src: 'fetchSuggestions',
                   onDone: [
@@ -84,12 +92,9 @@ const searchBoxMachine = createMachine<Context, Event>(
                 },
               },
               changing: {
-                entry: ['assignChangeToQuery', 'clearSelection'],
+                entry: ['assignChangeToQuery', 'clearSelection', 'clearSuggestions', 'clearErrorMessage'],
                 after: {
-                  500: [
-                    { target: 'fetching', cond: 'hasAnyQueryForFetch' },
-                    { target: 'idle', actions: 'clearErrorMessage' },
-                  ],
+                  500: [{ target: 'fetching', cond: 'hasAnyQueryForFetch' }, { target: 'idle' }],
                 },
               },
               errored: {},
@@ -118,14 +123,18 @@ const searchBoxMachine = createMachine<Context, Event>(
             },
           },
         },
+        on: {
+          CLEAR: {
+            target: 'enabled.focused.idle',
+            actions: ['clearQueryValue', 'clearSuggestions', 'clearErrorMessage', 'clearSelection'],
+          },
+        },
       },
       disabled: {},
     },
     on: {
-      CLEAR: {
-        target: 'enabled.focused.idle',
-        actions: ['clearQueryValue', 'clearSuggestions', 'clearErrorMessage', 'clearSelection'],
-      },
+      DISABLE: 'disabled',
+      ENABLE: 'enabled',
       CHANGE_CONFIG: { actions: ['assignConfigToContext'] },
     },
   },

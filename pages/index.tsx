@@ -1,6 +1,17 @@
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
-import { Code, Container, HStack, IconButton, Stack, Switch, Text, useColorMode, VStack } from '@chakra-ui/react';
+import {
+  Button,
+  Code,
+  Container,
+  HStack,
+  IconButton,
+  Stack,
+  Switch,
+  useBoolean,
+  useColorMode,
+  VStack,
+} from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 import SearchBox from '../components/SearchBox';
@@ -10,6 +21,7 @@ export default function Home() {
   const { colorMode, toggleColorMode } = useColorMode();
   const [config, setConfig] = useState<Config>({ focusOnSelect: false });
   const [focusOnSelect, setFocusOnSelect] = useState('off');
+  const [isDisabled, diabledActions] = useBoolean(false);
 
   useEffect(() => {
     setConfig({ focusOnSelect: focusOnSelect === 'on' });
@@ -35,6 +47,9 @@ export default function Home() {
                 onClick={toggleColorMode}
                 icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
               />
+              <Button colorScheme="teal" size="sm" onClick={diabledActions.toggle}>
+                {isDisabled ? 'Enable' : 'Disable'}
+              </Button>
               <Stack direction="column">
                 <Code>focusOnSelect</Code>
                 <Switch
@@ -49,6 +64,7 @@ export default function Home() {
               fetchHandler={fetchPlaces}
               mapResultToSuggestion={fromPlaceToSuggestion}
               focusOnSelect={config.focusOnSelect}
+              isDisabled={isDisabled}
             />
           </VStack>
         </Container>

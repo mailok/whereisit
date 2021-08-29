@@ -8,11 +8,12 @@ interface SearchBoxProps {
   fetchHandler: (query: string) => Promise<any>;
   mapResultToSuggestion: (value: any) => Suggestion;
   focusOnSelect?: boolean;
+  isDisabled?: boolean;
 }
 
 const SearchBox: React.FC<SearchBoxProps> = (props) => {
   const [state, send] = useMachine(searchBoxMachine, {
-    devTools: false,
+    devTools: true,
     services: {
       fetchSuggestions: (context) =>
         props.fetchHandler(context.query).then((response) => response.map(props.mapResultToSuggestion)),
@@ -30,7 +31,10 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
     send({ type: 'CHANGE_CONFIG', config: { focusOnSelect: props.focusOnSelect } });
   }, [props.focusOnSelect]);
 
-  // TODO: Eliminar esto
+  useEffect(() => {
+    send({ type: props.isDisabled ? 'DISABLE' : 'ENABLE' });
+  }, [props.isDisabled]);
+
   const colorSchema = state.matches({ enabled: { focused: 'changing' } })
     ? 'orange'
     : state.matches({ enabled: { focused: 'fetching' } })
@@ -64,6 +68,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
         error={state.context.errorMessage!}
         highlightedId={state.context.selected?.id}
         focusOnSelect={state.context.config.focusOnSelect}
+        isDisabled={state.matches('disabled')}
       />
     </VStack>
   );
