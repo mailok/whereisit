@@ -20,13 +20,6 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
     },
   });
 
-  const isInvalid = [{ enabled: { focused: 'errored' } }, { enabled: { unfocused: 'errored' } }].some(state.matches);
-  const isOpen = [
-    { enabled: { focused: 'waitingSelection' } },
-    { enabled: { focused: 'showingEmptyResult' } },
-    { enabled: { focused: 'errored' } },
-  ].some(state.matches);
-
   useEffect(() => {
     send({ type: 'CHANGE_CONFIG', config: { focusOnSelect: props.focusOnSelect } });
   }, [props.focusOnSelect]);
@@ -35,17 +28,17 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
     send({ type: props.isDisabled ? 'DISABLE' : 'ENABLE' });
   }, [props.isDisabled]);
 
-  const colorSchema = state.matches({ enabled: { focused: 'changing' } })
+  const colorSchema = state.hasTag('isChanging')
     ? 'orange'
-    : state.matches({ enabled: { focused: 'fetching' } })
+    : state.hasTag('isFetching')
     ? 'teal'
-    : state.matches({ enabled: { focused: 'waitingSelection' } })
+    : state.hasTag('isWaitingForSelection')
     ? 'yellow'
-    : state.matches({ enabled: { focused: 'suggestionSelected' } })
+    : state.hasTag('isAnySuggestionSelected')
     ? 'purple'
-    : state.matches({ enabled: { focused: 'showingEmptyResult' } })
+    : state.hasTag('hasEmptyResult')
     ? 'pink'
-    : isInvalid
+    : state.hasTag('isErrored')
     ? 'red'
     : undefined;
 
@@ -54,7 +47,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
       <Badge colorScheme={colorSchema}>{JSON.stringify(state.value, null, 2)}</Badge>
       <Autocomplete
         value={state.context.query}
-        isLoading={state.matches({ enabled: { focused: 'fetching' } })}
+        isLoading={state.hasTag('isFetching')}
         suggestions={state.context.suggestions}
         onChange={(event) => send({ type: 'CHANGE', value: event.target.value })}
         onSelect={(suggestion) => send({ type: 'SELECT', id: Number(suggestion.id) })}
@@ -62,13 +55,13 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
         onFocus={(event) => send({ type: 'FOCUS' })}
         onClick={(event) => send({ type: 'CLICK' })}
         onClear={() => send({ type: 'CLEAR' })}
-        isOpen={isOpen}
+        isOpen={state.hasTag('isOpened')}
         placeholder="Enter a query..."
-        isInvalid={isInvalid}
+        isInvalid={state.hasTag('isErrored')}
         error={state.context.errorMessage!}
         highlightedId={state.context.selected?.id}
         focusOnSelect={state.context.config.focusOnSelect}
-        isDisabled={state.matches('disabled')}
+        isDisabled={state.hasTag('isDisabled')}
       />
     </VStack>
   );

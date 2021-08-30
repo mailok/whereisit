@@ -40,7 +40,7 @@ type Event =
 
 const searchBoxMachine = createMachine<Context, Event>(
   {
-    initial: 'enabled',
+    type: 'parallel',
     context: {
       query: '',
       suggestions: [],
@@ -51,90 +51,132 @@ const searchBoxMachine = createMachine<Context, Event>(
       },
     },
     states: {
-      enabled: {
-        initial: 'unfocused',
+      status: {
+        initial: 'enabled',
         states: {
-          unfocused: {
-            id: 'unfocused',
-            initial: 'idle',
+          enabled: {
+            initial: 'unfocused',
+            tags: ['isEnabled'],
             states: {
-              idle: {},
-              errored: {},
-            },
-            on: {
-              FOCUS: [
-                { target: 'focused.errored', cond: 'hasAnyErrorReported' },
-                { target: 'focused.waitingSelection', cond: 'hasAnySuggestionToShow' },
-                { target: 'focused.fetching', cond: 'hasAnyQueryForFetch' },
-                { target: 'focused.idle' },
-              ],
-            },
-          },
-          focused: {
-            initial: 'idle',
-            states: {
-              idle: {},
-              fetching: {
-                invoke: {
-                  src: 'fetchSuggestions',
-                  onDone: [
-                    {
-                      cond: 'hasResponseAnySuggestionToShow',
-                      target: 'waitingSelection',
-                      actions: ['assignResponseToSuggestions'],
-                    },
-                    { target: 'showingEmptyResult' },
-                  ],
-                  onError: {
-                    target: 'errored',
-                    actions: 'assignReasonToErrorMessage',
+              unfocused: {
+                id: 'unfocused',
+                initial: 'idle',
+                tags: ['isUnfocused'],
+                states: {
+                  idle: {},
+                  errored: {
+                    tags: ['isErrored'],
                   },
                 },
-              },
-              changing: {
-                entry: ['assignChangeToQuery', 'clearSelection', 'clearSuggestions', 'clearErrorMessage'],
-                after: {
-                  500: [{ target: 'fetching', cond: 'hasAnyQueryForFetch' }, { target: 'idle' }],
-                },
-              },
-              errored: {},
-              waitingSelection: {
                 on: {
-                  SELECT: [
-                    {
-                      cond: 'shouldFocusOnSelect',
-                      target: 'suggestionSelected',
-                      actions: ['assignSelectionToSelected', 'clearErrorMessage'],
-                    },
-                    { target: '#unfocused.idle', actions: ['assignSelectionToSelected', 'clearErrorMessage'] },
+                  FOCUS: [
+                    { target: 'focused.errored', cond: 'hasAnyErrorReported' },
+                    { target: 'focused.waitingSelection', cond: 'hasAnySuggestionToShow' },
+                    { target: 'focused.fetching', cond: 'hasAnyQueryForFetch' },
+                    { target: 'focused.idle' },
                   ],
                 },
               },
-              suggestionSelected: {
+              focused: {
+                initial: 'idle',
+                tags: ['isFocused'],
+                states: {
+                  idle: {},
+                  fetching: {
+                    tags: ['isFetching'],
+                    invoke: {
+                      src: 'fetchSuggestions',
+                      onDone: [
+                        {
+                          cond: 'hasResponseAnySuggestionToShow',
+                          target: 'waitingSelection',
+                          actions: ['assignResponseToSuggestions'],
+                        },
+                        { target: 'showingEmptyResult' },
+                      ],
+                      onError: {
+                        target: 'errored',
+                        actions: 'assignReasonToErrorMessage',
+                      },
+                    },
+                  },
+                  /*evaluatingChanges: {
+                    tags: ['isChanging'],
+                    entry: ['assignChangeToQuery', 'clearSelection', 'clearSuggestions', 'clearErrorMessage'],
+                    always: [
+                      { target: ['waiting', '#value.dirty'], cond: 'hasAnyQueryForFetch' },
+                      { target: ['idle', '#value.empty'] },
+                    ],
+                  },
+                  waitingForMoreChanges: {
+                    after: { 500: 'fetching' },
+                  },*/
+                  evaluatingChanges: {
+                    tags: ['isChanging'],
+                    entry: ['assignChangeToQuery', 'clearSelection', 'clearSuggestions', 'clearErrorMessage'],
+                    after: {
+                      500: [
+                        { target: ['fetching', '#value.dirty'], cond: 'hasAnyQueryForFetch' },
+                        { target: ['idle', '#value.empty'] },
+                      ],
+                    },
+                  },
+                  errored: {
+                    tags: ['isErrored', 'isOpened'],
+                  },
+                  waitingSelection: {
+                    tags: ['isWaitingForSelection', 'isOpened'],
+                    on: {
+                      SELECT: [
+                        {
+                          cond: 'shouldFocusOnSelect',
+                          target: 'suggestionSelected',
+                          actions: ['assignSelectionToSelected', 'clearErrorMessage'],
+                        },
+                        { target: '#unfocused.idle', actions: ['assignSelectionToSelected', 'clearErrorMessage'] },
+                      ],
+                    },
+                  },
+                  suggestionSelected: {
+                    tags: ['isAnySuggestionSelected'],
+                    on: {
+                      CLICK: 'waitingSelection',
+                    },
+                  },
+                  showingEmptyResult: {
+                    tags: ['hasEmptyResult', 'isOpened'],
+                  },
+                },
                 on: {
-                  CLICK: 'waitingSelection',
+                  CHANGE: 'focused.evaluatingChanges',
+                  BLUR: [{ target: 'unfocused.errored', cond: 'hasAnyErrorReported' }, { target: 'unfocused.idle' }],
                 },
               },
-              showingEmptyResult: {},
             },
             on: {
-              CHANGE: 'focused.changing',
-              BLUR: [{ target: 'unfocused.errored', cond: 'hasAnyErrorReported' }, { target: 'unfocused.idle' }],
+              CLEAR: {
+                target: ['.focused.idle', '#value.empty'],
+                actions: ['clearQueryValue', 'clearSuggestions', 'clearErrorMessage', 'clearSelection'],
+              },
             },
           },
-        },
-        on: {
-          CLEAR: {
-            target: 'enabled.focused.idle',
-            actions: ['clearQueryValue', 'clearSuggestions', 'clearErrorMessage', 'clearSelection'],
+          disabled: {
+            tags: ['isDisabled'],
           },
         },
       },
-      disabled: {},
+      value: {
+        id: 'value',
+        initial: 'empty',
+        states: {
+          empty: {},
+          dirty: {},
+        },
+      },
     },
     on: {
-      DISABLE: 'disabled',
-      ENABLE: 'enabled',
+      DISABLE: 'status.disabled',
+      ENABLE: 'status.enabled',
       CHANGE_CONFIG: { actions: ['assignConfigToContext'] },
     },
   },

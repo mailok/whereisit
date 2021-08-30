@@ -21,7 +21,7 @@ export default function Home() {
   const { colorMode, toggleColorMode } = useColorMode();
   const [config, setConfig] = useState<Config>({ focusOnSelect: false });
   const [focusOnSelect, setFocusOnSelect] = useState('off');
-  const [isDisabled, diabledActions] = useBoolean(false);
+  const [isDisabled, disabledActions] = useBoolean(false);
 
   useEffect(() => {
     setConfig({ focusOnSelect: focusOnSelect === 'on' });
@@ -47,7 +47,7 @@ export default function Home() {
                 onClick={toggleColorMode}
                 icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
               />
-              <Button colorScheme="teal" size="sm" onClick={diabledActions.toggle}>
+              <Button colorScheme="teal" size="sm" onClick={disabledActions.toggle}>
                 {isDisabled ? 'Enable' : 'Disable'}
               </Button>
               <Stack direction="column">
