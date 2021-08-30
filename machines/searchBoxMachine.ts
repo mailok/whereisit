@@ -104,7 +104,7 @@ const searchBoxMachine = createMachine<Context, Event>(
                     tags: ['isChanging'],
                     entry: ['assignChangeToQuery', 'clearSelection', 'clearSuggestions', 'clearErrorMessage'],
                     always: [
-                      { target: ['waiting', '#value.dirty'], cond: 'hasAnyQueryForFetch' },
+                      { target: ['waitingForMoreChanges', '#value.dirty'], cond: 'hasAnyQueryForFetch' },
                       { target: ['idle', '#value.empty'] },
                     ],
                   },
