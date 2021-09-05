@@ -16,6 +16,7 @@ import React, { useEffect, useState } from 'react';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 import SearchBox from '../components/SearchBox';
 import { Config, Suggestion } from '../machines/searchBoxMachine';
+import Input from '../components/Input';
 
 export default function Home() {
   const { colorMode, toggleColorMode } = useColorMode();

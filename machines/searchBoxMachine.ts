@@ -131,7 +131,7 @@ const searchBoxMachine = createMachine<Context, Event>(
                         {
                           cond: 'shouldFocusOnSelect',
                           target: 'suggestionSelected',
-                          actions: ['assignSelectionToSelected', 'clearErrorMessage'],
+                          actions: ['assignSelectionToSelected', 'clearErrorMessage', 'focus'],
                         },
                         { target: '#unfocused.idle', actions: ['assignSelectionToSelected', 'clearErrorMessage'] },
                       ],
@@ -156,7 +156,7 @@ const searchBoxMachine = createMachine<Context, Event>(
             on: {
               CLEAR: {
                 target: ['.focused.idle', '#value.empty'],
-                actions: ['clearQueryValue', 'clearSuggestions', 'clearErrorMessage', 'clearSelection'],
+                actions: ['clearQueryValue', 'clearSuggestions', 'clearErrorMessage', 'clearSelection', 'focus'],
               },
             },
           },
@@ -170,7 +170,9 @@ const searchBoxMachine = createMachine<Context, Event>(
         initial: 'empty',
         states: {
           empty: {},
-          dirty: {},
+          dirty: {
+            tags: ['isDirty'],
+          },
         },
       },
     },
