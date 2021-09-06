@@ -18,7 +18,7 @@ import {
 } from '@chakra-ui/react';
 import { ListProps as NativeListProps } from '@chakra-ui/layout/dist/types/list';
 import { Else, If, Then } from './utils';
-import Input, { useInputFocusBorderColor } from './Input';
+import Input from './Input';
 import { Search2Icon } from '@chakra-ui/icons';
 
 interface SearchBoxProps {
@@ -36,7 +36,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
         props.fetchHandler(context.query).then((response) => response.map(props.mapResultToSuggestion)),
     },
     actions: {
-      focus: (context) => {
+      focus: () => {
         inputRef.current?.focus();
       },
     },
@@ -57,8 +57,6 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
     ref: containerRef,
     handler: () => send({ type: 'BLUR' }),
   });
-
-  const { color, focusBorderColor } = useInputFocusBorderColor(state.hasTag('isErrored'));
 
   const colorSchema = state.hasTag('isChanging')
     ? 'orange'
@@ -101,18 +99,17 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
                 <If cond={state.hasTag('isDirty')}>
                   <Then>
                     <Button
-                      variant="outline"
-                      borderColor={focusBorderColor}
+                      isDisabled={state.hasTag('isDisabled')}
+                      variant={state.hasTag('isErrored') ? 'searchBoxErrored' : 'searchBox'}
                       p={1}
                       size="xs"
-                      color={color}
                       onClick={() => send({ type: 'CLEAR' })}
                     >
                       CLEAR
                     </Button>
                   </Then>
                   <Else>
-                    <Search2Icon color="gray.400" />
+                    <Search2Icon color={'gray.400'} />
                   </Else>
                 </If>
               }
