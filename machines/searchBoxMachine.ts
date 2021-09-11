@@ -115,10 +115,7 @@ const searchBoxMachine = createMachine<Context, Event>(
                     tags: ['isChanging'],
                     entry: ['assignChangeToQuery', 'clearSelection', 'clearSuggestions', 'clearErrorMessage'],
                     after: {
-                      500: [
-                        { target: ['fetching', '#value.dirty'], cond: 'hasAnyQueryForFetch' },
-                        { target: ['idle', '#value.empty'] },
-                      ],
+                      500: [{ target: 'fetching', cond: 'hasAnyQueryForFetch' }, { target: 'idle' }],
                     },
                   },
                   errored: {
@@ -155,7 +152,7 @@ const searchBoxMachine = createMachine<Context, Event>(
             },
             on: {
               CLEAR: {
-                target: ['.focused.idle', '#value.empty'],
+                target: '.focused.idle',
                 actions: ['clearQueryValue', 'clearSuggestions', 'clearErrorMessage', 'clearSelection', 'focus'],
               },
             },
@@ -169,10 +166,15 @@ const searchBoxMachine = createMachine<Context, Event>(
         id: 'value',
         initial: 'empty',
         states: {
-          empty: {},
+          empty: {
+            tags: ['isEmpty'],
+          },
           dirty: {
             tags: ['isDirty'],
           },
+        },
+        on: {
+          '*': [{ target: '.dirty', cond: 'hasQueryAnyValue' }, { target: '.empty' }],
         },
       },
     },
@@ -255,6 +257,9 @@ const searchBoxMachine = createMachine<Context, Event>(
       },
       shouldFocusOnSelect: (context, event) => {
         return Boolean(context.config.focusOnSelect);
+      },
+      hasQueryAnyValue: (context, event) => {
+        return Boolean(context.query);
       },
     },
   },
