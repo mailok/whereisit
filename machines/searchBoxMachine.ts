@@ -161,6 +161,11 @@ const searchBoxMachine = createMachine<Context, Event>(
             tags: ['isDisabled'],
           },
         },
+        on: {
+          DISABLE: '.disabled',
+          ENABLE: '.enabled',
+          CHANGE_CONFIG: { actions: ['assignConfigToContext'] },
+        },
       },
       value: {
         id: 'value',
@@ -177,11 +182,6 @@ const searchBoxMachine = createMachine<Context, Event>(
           '*': [{ target: '.dirty', cond: 'hasQueryAnyValue' }, { target: '.empty' }],
         },
       },
-    },
-    on: {
-      DISABLE: 'status.disabled',
-      ENABLE: 'status.enabled',
-      CHANGE_CONFIG: { actions: ['assignConfigToContext'] },
     },
   },
   {
