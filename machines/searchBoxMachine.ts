@@ -1,13 +1,14 @@
-import { assign, createMachine } from 'xstate';
+import { assign, ContextFrom, EventFrom } from 'xstate';
 import { inspect } from '@xstate/inspect';
+import { createModel } from 'xstate/lib/model';
 
-if (typeof window !== 'undefined') {
+/*if (typeof window !== 'undefined') {
   inspect({
     // options
     url: 'https://stately.ai/viz?inspect',
     iframe: false, // open in new window
   });
-}
+}*/
 
 export interface Suggestion {
   id: number | string;
@@ -18,27 +19,39 @@ export interface Config {
   focusOnSelect?: boolean;
 }
 
-interface Context {
-  query: string;
-  suggestions: Suggestion[];
-  selected: Suggestion | null;
-  errorMessage: null | string;
-  config: Config;
-}
+export const searchBoxModel = createModel(
+  {
+    query: '',
+    suggestions: [] as Suggestion[],
+    errorMessage: '' as null | string,
+    selected: null as Suggestion | null,
+    config: {
+      focusOnSelect: false,
+    } as Config,
+  },
+  {
+    events: {
+      FOCUS: () => ({}),
+      BLUR: () => ({}),
+      CLEAR: () => ({}),
+      ENABLE: () => ({}),
+      DISABLE: () => ({}),
+      CLICK: () => ({}),
+      SELECT: (id: string | number) => ({ id }),
+      CHANGE: (value: string) => ({ value }),
+      CHANGE_CONFIG: (config: Partial<Config>) => ({ config }),
+      'done.invoke.fetchSuggestions': (data: Suggestion[]) => ({ data }),
+    },
+  },
+);
 
-type Event =
-  | { type: 'FOCUS' }
-  | { type: 'BLUR' }
-  | { type: 'CLEAR' }
-  | { type: 'ENABLE' }
-  | { type: 'DISABLE' }
-  | { type: 'CLICK' }
-  | { type: 'SELECT'; id: string | number }
-  | { type: 'CHANGE'; value: string }
-  | { type: 'CHANGE_CONFIG'; config: Partial<Config> }
-  | { type: 'done.invoke.fetchSuggestions'; data: Suggestion[] };
+type Context = ContextFrom<typeof searchBoxModel>;
+type Event = EventFrom<typeof searchBoxModel>;
 
-const searchBoxMachine = createMachine<Context, Event>(
+export type { Context as SearchBoxMachineContext };
+export type { Event as SearchBoxEvent };
+
+const searchBoxMachine = searchBoxModel.createMachine(
   {
     type: 'parallel',
     context: {

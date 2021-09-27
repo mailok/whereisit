@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useMachine } from '@xstate/react';
-import searchBoxMachine, { Suggestion } from '../machines/searchBoxMachine';
+import searchBoxMachine, { searchBoxModel, Suggestion } from '../machines/searchBoxMachine';
 import {
   Badge,
   Button,
@@ -43,11 +43,11 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
   });
 
   useEffect(() => {
-    send({ type: 'CHANGE_CONFIG', config: { focusOnSelect: props.focusOnSelect } });
+    send(searchBoxModel.events.CHANGE_CONFIG({ focusOnSelect: props.focusOnSelect }));
   }, [props.focusOnSelect]);
 
   useEffect(() => {
-    send({ type: props.isDisabled ? 'DISABLE' : 'ENABLE' });
+    send(props.isDisabled ? searchBoxModel.events.DISABLE() : searchBoxModel.events.ENABLE());
   }, [props.isDisabled]);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -55,7 +55,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
 
   useOutsideClick({
     ref: containerRef,
-    handler: () => send({ type: 'BLUR' }),
+    handler: () => send(searchBoxModel.events.BLUR()),
   });
 
   const colorSchema = state.hasTag('isChanging')
@@ -88,9 +88,9 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
               ref={inputRef}
               value={state.context.query}
               isLoading={state.hasTag('isFetching')}
-              onChange={(event) => send({ type: 'CHANGE', value: event.target.value })}
-              onFocus={(event) => send({ type: 'FOCUS' })}
-              onClick={(event) => send({ type: 'CLICK' })}
+              onChange={(event) => send(searchBoxModel.events.CHANGE(event.target.value))}
+              onFocus={(event) => send(searchBoxModel.events.FOCUS())}
+              onClick={(event) => send(searchBoxModel.events.CLICK())}
               isInvalid={state.hasTag('isErrored')}
               isDisabled={state.hasTag('isDisabled')}
               error={state.context.errorMessage!}
@@ -103,7 +103,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
                       variant={state.hasTag('isErrored') ? 'searchBoxErrored' : 'searchBox'}
                       p={1}
                       size="xs"
-                      onClick={() => send({ type: 'CLEAR' })}
+                      onClick={() => send(searchBoxModel.events.CLEAR())}
                     >
                       CLEAR
                     </Button>
@@ -130,7 +130,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
                     <ListItem
                       key={suggestion.id}
                       highlight={state.context.selected?.id === suggestion.id}
-                      onClick={(event) => send({ type: 'SELECT', id: Number(suggestion.id) })}
+                      onClick={(event) => send(searchBoxModel.events.SELECT(Number(suggestion.id)))}
                     >
                       {suggestion.label}
                     </ListItem>
