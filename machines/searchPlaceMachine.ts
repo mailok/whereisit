@@ -10,21 +10,36 @@ import { createModel } from 'xstate/lib/model';
   });
 }*/
 
-export interface Suggestion {
+/*export interface Suggestion {
   id: number | string;
   label: string;
+}*/
+
+export interface Place {
+  place_id: number;
+  licence: string;
+  osm_type: string;
+  osm_id: any;
+  boundingbox: string[];
+  lat: string;
+  lon: string;
+  display_name: string;
+  class: string;
+  type: string;
+  importance: number;
+  icon: string;
 }
 
 export interface Config {
   focusOnSelect?: boolean;
 }
 
-export const searchBoxModel = createModel(
+export const searchPlaceModel = createModel(
   {
     query: '',
-    suggestions: [] as Suggestion[],
+    places: [] as Place[],
     errorMessage: '' as null | string,
-    selected: null as Suggestion | null,
+    selected: null as Place | null,
     config: {
       focusOnSelect: false,
     } as Config,
@@ -40,23 +55,23 @@ export const searchBoxModel = createModel(
       SELECT: (id: string | number) => ({ id }),
       CHANGE: (value: string) => ({ value }),
       CHANGE_CONFIG: (config: Partial<Config>) => ({ config }),
-      'done.invoke.fetchSuggestions': (data: Suggestion[]) => ({ data }),
+      'done.invoke.fetchPlaces': (data: Place[]) => ({ data }),
     },
   },
 );
 
-type Context = ContextFrom<typeof searchBoxModel>;
-type Event = EventFrom<typeof searchBoxModel>;
+type Context = ContextFrom<typeof searchPlaceModel>;
+type Event = EventFrom<typeof searchPlaceModel>;
 
-export type { Context as SearchBoxMachineContext };
-export type { Event as SearchBoxEvent };
+export type { Context as SearchPlaceMachineContext };
+export type { Event as SearchPlaceEvent };
 
-const searchBoxMachine = searchBoxModel.createMachine(
+const searchPlaceMachine = searchPlaceModel.createMachine(
   {
     type: 'parallel',
     context: {
       query: '',
-      suggestions: [],
+      places: [],
       errorMessage: '',
       selected: null,
       config: {
@@ -98,7 +113,7 @@ const searchBoxMachine = searchBoxModel.createMachine(
                   fetching: {
                     tags: ['isFetching'],
                     invoke: {
-                      src: 'fetchSuggestions',
+                      src: 'fetchPlaces',
                       onDone: [
                         {
                           cond: 'hasResponseAnySuggestionToShow',
@@ -198,6 +213,27 @@ const searchBoxMachine = searchBoxModel.createMachine(
     },
   },
   {
+    guards: {
+      hasAnySuggestionToShow: (context, event) => {
+        return context.places.length > 0;
+      },
+      hasResponseAnySuggestionToShow: (context, event) => {
+        if (event.type !== 'done.invoke.fetchPlaces') return false;
+        return event.data.length > 0;
+      },
+      hasAnyQueryForFetch: (context, event) => {
+        return Boolean(context.query);
+      },
+      hasAnyErrorReported: (context, event) => {
+        return Boolean(context.errorMessage);
+      },
+      shouldFocusOnSelect: (context, event) => {
+        return Boolean(context.config.focusOnSelect);
+      },
+      hasQueryAnyValue: (context, event) => {
+        return Boolean(context.query);
+      },
+    },
     actions: {
       assignReasonToErrorMessage: assign<Context, any>((context, event) => {
         return {
@@ -206,9 +242,9 @@ const searchBoxMachine = searchBoxModel.createMachine(
         };
       }),
       assignResponseToSuggestions: assign<Context, Event>((context, event) => {
-        if (event.type !== 'done.invoke.fetchSuggestions') return {};
+        if (event.type !== 'done.invoke.fetchPlaces') return {};
         return {
-          suggestions: event.data,
+          places: event.data,
         };
       }),
       assignChangeToQuery: assign<Context, Event>((context, event) => {
@@ -217,9 +253,9 @@ const searchBoxMachine = searchBoxModel.createMachine(
       }),
       assignSelectionToSelected: assign<Context, Event>((context, event) => {
         if (event.type !== 'SELECT') return {};
-        const suggestion = context.suggestions.find((suggestion) => suggestion.id === event.id);
-        if (suggestion) {
-          return { query: suggestion.label, selected: suggestion };
+        const place = context.places.find((place) => place.place_id === event.id);
+        if (place) {
+          return { query: place.display_name, selected: place };
         } else
           return {
             query: '',
@@ -250,32 +286,22 @@ const searchBoxMachine = searchBoxModel.createMachine(
       }),
       clearSuggestions: assign<Context, Event>(() => {
         return {
-          suggestions: [],
+          places: [],
         };
       }),
     },
-    guards: {
-      hasAnySuggestionToShow: (context, event) => {
-        return context.suggestions.length > 0;
-      },
-      hasResponseAnySuggestionToShow: (context, event) => {
-        if (event.type !== 'done.invoke.fetchSuggestions') return false;
-        return event.data.length > 0;
-      },
-      hasAnyQueryForFetch: (context, event) => {
-        return Boolean(context.query);
-      },
-      hasAnyErrorReported: (context, event) => {
-        return Boolean(context.errorMessage);
-      },
-      shouldFocusOnSelect: (context, event) => {
-        return Boolean(context.config.focusOnSelect);
-      },
-      hasQueryAnyValue: (context, event) => {
-        return Boolean(context.query);
+    services: {
+      fetchPlaces: (context) => {
+        if (Boolean(context.query)) {
+          return fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${context.query.replaceAll(' ', '+')}`,
+          ).then((response) => response.json());
+        } else {
+          return Promise.resolve([]);
+        }
       },
     },
   },
 );
 
-export default searchBoxMachine;
+export default searchPlaceMachine;

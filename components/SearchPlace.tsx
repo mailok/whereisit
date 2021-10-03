@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useMachine } from '@xstate/react';
-import searchBoxMachine, { searchBoxModel, Suggestion } from '../machines/searchBoxMachine';
 import {
   Badge,
   Button,
@@ -20,21 +19,18 @@ import { ListProps as NativeListProps } from '@chakra-ui/layout/dist/types/list'
 import { Else, If, Then } from './utils';
 import Input from './Input';
 import { Search2Icon } from '@chakra-ui/icons';
+import searchPlaceMachine, { Place, searchPlaceModel } from '../machines/searchPlaceMachine';
 
-interface SearchBoxProps {
-  fetchHandler: (query: string) => Promise<any>;
-  mapResultToSuggestion: (value: any) => Suggestion;
+interface SearchPlaceProps {
   focusOnSelect?: boolean;
   isDisabled?: boolean;
+  showState?: boolean;
+  onSelect?: (place: Place) => void;
 }
 
-const SearchBox: React.FC<SearchBoxProps> = (props) => {
-  const [state, send] = useMachine(searchBoxMachine, {
+const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
+  const [state, send] = useMachine(searchPlaceMachine, {
     devTools: true,
-    services: {
-      fetchSuggestions: (context) =>
-        props.fetchHandler(context.query).then((response) => response.map(props.mapResultToSuggestion)),
-    },
     actions: {
       focus: () => {
         inputRef.current?.focus();
@@ -43,11 +39,11 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
   });
 
   useEffect(() => {
-    send(searchBoxModel.events.CHANGE_CONFIG({ focusOnSelect: props.focusOnSelect }));
+    send(searchPlaceModel.events.CHANGE_CONFIG({ focusOnSelect: props.focusOnSelect }));
   }, [props.focusOnSelect]);
 
   useEffect(() => {
-    send(props.isDisabled ? searchBoxModel.events.DISABLE() : searchBoxModel.events.ENABLE());
+    send(props.isDisabled ? searchPlaceModel.events.DISABLE() : searchPlaceModel.events.ENABLE());
   }, [props.isDisabled]);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -55,7 +51,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
 
   useOutsideClick({
     ref: containerRef,
-    handler: () => send(searchBoxModel.events.BLUR()),
+    handler: () => send(searchPlaceModel.events.BLUR()),
   });
 
   const colorSchema = state.hasTag('isChanging')
@@ -73,8 +69,12 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
     : undefined;
 
   return (
-    <VStack w={'100%'} spacing={10}>
-      <Badge colorScheme={colorSchema}>{JSON.stringify(state.value, null, 2)}</Badge>
+    <VStack w={'100%'} spacing={props.showState ? 2 : undefined}>
+      <If cond={props.showState}>
+        <Then>
+          <Badge colorScheme={colorSchema}>{JSON.stringify(state.value, null, 2)}</Badge>
+        </Then>
+      </If>
       <VStack w="100%" spacing={0} align="stretch" ref={containerRef}>
         <Popover
           autoFocus={false}
@@ -88,9 +88,9 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
               ref={inputRef}
               value={state.context.query}
               isLoading={state.hasTag('isFetching')}
-              onChange={(event) => send(searchBoxModel.events.CHANGE(event.target.value))}
-              onFocus={(event) => send(searchBoxModel.events.FOCUS())}
-              onClick={(event) => send(searchBoxModel.events.CLICK())}
+              onChange={(event) => send(searchPlaceModel.events.CHANGE(event.target.value))}
+              onFocus={(event) => send(searchPlaceModel.events.FOCUS())}
+              onClick={(event) => send(searchPlaceModel.events.CLICK())}
               isInvalid={state.hasTag('isErrored')}
               isDisabled={state.hasTag('isDisabled')}
               error={state.context.errorMessage!}
@@ -103,7 +103,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
                       variant={state.hasTag('isErrored') ? 'searchBoxErrored' : 'searchBox'}
                       p={1}
                       size="xs"
-                      onClick={() => send(searchBoxModel.events.CLEAR())}
+                      onClick={() => send(searchPlaceModel.events.CLEAR())}
                     >
                       CLEAR
                     </Button>
@@ -124,15 +124,18 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
             }}
           >
             <List>
-              <If cond={state.context.suggestions.length > 0}>
+              <If cond={state.context.places.length > 0}>
                 <Then>
-                  {state.context.suggestions.map((suggestion) => (
+                  {state.context.places.map((place) => (
                     <ListItem
-                      key={suggestion.id}
-                      highlight={state.context.selected?.id === suggestion.id}
-                      onClick={(event) => send(searchBoxModel.events.SELECT(Number(suggestion.id)))}
+                      key={place.place_id}
+                      highlight={state.context.selected?.place_id === place.place_id}
+                      onClick={(event) => {
+                        send(searchPlaceModel.events.SELECT(Number(place.place_id)));
+                        props?.onSelect?.(place);
+                      }}
                     >
-                      {suggestion.label}
+                      {place.display_name}
                     </ListItem>
                   ))}
                 </Then>
@@ -151,7 +154,7 @@ const SearchBox: React.FC<SearchBoxProps> = (props) => {
   );
 };
 
-export default SearchBox;
+export default SearchPlace;
 
 /********************************
  *

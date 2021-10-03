@@ -12,21 +12,15 @@ import {
   useColorMode,
   VStack,
 } from '@chakra-ui/react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
-import SearchBox from '../components/SearchBox';
-import { Config, Suggestion } from '../machines/searchBoxMachine';
-import Input from '../components/Input';
+import SearchPlace from '../components/SearchPlace';
 
 export default function Home() {
   const { colorMode, toggleColorMode } = useColorMode();
-  const [config, setConfig] = useState<Config>({ focusOnSelect: false });
+
   const [focusOnSelect, setFocusOnSelect] = useState('off');
   const [isDisabled, disabledActions] = useBoolean(false);
-
-  useEffect(() => {
-    setConfig({ focusOnSelect: focusOnSelect === 'on' });
-  }, [focusOnSelect]);
 
   return (
     <div className={styles.container}>
@@ -48,10 +42,10 @@ export default function Home() {
                 onClick={toggleColorMode}
                 icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
               />
-              <Button colorScheme="teal" size="sm" onClick={disabledActions.toggle}>
+              {/*    <Button colorScheme="teal" size="sm" onClick={disabledActions.toggle}>
                 {isDisabled ? 'Enable' : 'Disable'}
-              </Button>
-              <Stack direction="column">
+              </Button>*/}
+              {/* <Stack direction="column">
                 <Code>focusOnSelect</Code>
                 <Switch
                   colorScheme="teal"
@@ -59,14 +53,9 @@ export default function Home() {
                   value={focusOnSelect}
                   onChange={() => setFocusOnSelect((prevState) => (prevState === 'on' ? 'off' : 'on'))}
                 />
-              </Stack>
+              </Stack>*/}
             </HStack>
-            <SearchBox
-              fetchHandler={fetchPlaces}
-              mapResultToSuggestion={fromPlaceToSuggestion}
-              focusOnSelect={config.focusOnSelect}
-              isDisabled={isDisabled}
-            />
+            <SearchPlace isDisabled={isDisabled} onSelect={(place) => console.log(place)} showState />
           </VStack>
         </Container>
       </main>
@@ -74,34 +63,4 @@ export default function Home() {
       <footer className={styles.footer} />
     </div>
   );
-}
-
-interface Place {
-  place_id: number;
-  licence: string;
-  osm_type: string;
-  osm_id: any;
-  boundingbox: string[];
-  lat: string;
-  lon: string;
-  display_name: string;
-  class: string;
-  type: string;
-  importance: number;
-  icon: string;
-}
-
-function fetchPlaces(query: string): Promise<Place[]> {
-  return Boolean(query)
-    ? fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query.replaceAll(' ', '+')}`).then((response) =>
-        response.json(),
-      )
-    : Promise.resolve([]);
-}
-
-function fromPlaceToSuggestion(place: Place): Suggestion {
-  return {
-    id: place.place_id,
-    label: place.display_name,
-  };
 }
