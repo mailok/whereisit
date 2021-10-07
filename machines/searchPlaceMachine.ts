@@ -10,11 +10,6 @@ import { createModel } from 'xstate/lib/model';
   });
 }*/
 
-/*export interface Suggestion {
-  id: number | string;
-  label: string;
-}*/
-
 export interface Place {
   place_id: number;
   licence: string;

@@ -69,7 +69,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
     : undefined;
 
   return (
-    <VStack w={'100%'} spacing={props.showState ? 2 : undefined}>
+    <VStack w="100%" spacing={2}>
       <If cond={props.showState}>
         <Then>
           <Badge colorScheme={colorSchema}>{JSON.stringify(state.value, null, 2)}</Badge>
@@ -94,7 +94,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
               isInvalid={state.hasTag('isErrored')}
               isDisabled={state.hasTag('isDisabled')}
               error={state.context.errorMessage!}
-              placeholder="Enter a query..."
+              placeholder="Search your location"
               rightElement={
                 <If cond={state.hasTag('isDirty')}>
                   <Then>
