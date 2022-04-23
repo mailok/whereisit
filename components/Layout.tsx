@@ -16,7 +16,7 @@ const Layout: FC<LayoutProps> = (props) => {
       </Head>
       <Flex h="64px" alignItems="center" p="2" mb="2px">
         <Box>
-          <Heading size="md">Lorem Ipsum</Heading>
+          <Heading size="md"></Heading>
         </Box>
         <Spacer />
         <Box>

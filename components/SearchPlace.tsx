@@ -6,6 +6,7 @@ import {
   List as ChakraList,
   ListItem as ChakraListItem,
   ListItemProps as ChakraListItemProps,
+  ListProps as NativeListProps,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -15,7 +16,6 @@ import {
   useOutsideClick,
   VStack,
 } from '@chakra-ui/react';
-import { ListProps as NativeListProps } from '@chakra-ui/layout/dist/types/list';
 import { Else, If, Then } from './utils';
 import Input from './Input';
 import { Search2Icon } from '@chakra-ui/icons';

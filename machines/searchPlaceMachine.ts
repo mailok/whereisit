@@ -213,8 +213,7 @@ const searchPlaceMachine = searchPlaceModel.createMachine(
         return context.places.length > 0;
       },
       hasResponseAnySuggestionToShow: (context, event) => {
-        if (event.type !== 'done.invoke.fetchPlaces') return false;
-        return event.data.length > 0;
+        return (event as any)?.data?.length > 0;
       },
       hasAnyQueryForFetch: (context, event) => {
         return Boolean(context.query);
@@ -237,9 +236,9 @@ const searchPlaceMachine = searchPlaceModel.createMachine(
         };
       }),
       assignResponseToSuggestions: assign<Context, Event>((context, event) => {
-        if (event.type !== 'done.invoke.fetchPlaces') return {};
+        if (!Array.isArray((event as any)?.data)) return {};
         return {
-          places: event.data,
+          places: (event as any).data,
         };
       }),
       assignChangeToQuery: assign<Context, Event>((context, event) => {
