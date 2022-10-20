@@ -20,6 +20,7 @@ import { Else, If, Then } from './utils';
 import Input from './Input';
 import { Search2Icon } from '@chakra-ui/icons';
 import searchPlaceMachine, { Place, searchPlaceModel } from '../machines/searchPlaceMachine';
+import Places from '../utils/places';
 
 interface SearchPlaceProps {
   focusOnSelect?: boolean;
@@ -27,6 +28,16 @@ interface SearchPlaceProps {
   showState?: boolean;
   onSelect?: (place: Place) => void;
 }
+
+/**
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ * */
 
 const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
   const [state, send] = useMachine(searchPlaceMachine, {
@@ -68,6 +79,8 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
     ? 'red'
     : undefined;
 
+  const [value, query, Event] = Places.usePlaces();
+
   return (
     <VStack w="100%" spacing={2}>
       <If cond={props.showState}>
@@ -79,31 +92,31 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
         <Popover
           autoFocus={false}
           returnFocusOnClose={false}
-          isOpen={state.hasTag('isOpened')}
+          isOpen={!!query.places.length}
           placement="bottom-start"
           matchWidth
         >
           <PopoverTrigger>
             <Input
               ref={inputRef}
-              value={state.context.query}
-              isLoading={state.hasTag('isFetching')}
-              onChange={(event) => send(searchPlaceModel.events.CHANGE(event.target.value))}
-              onFocus={(event) => send(searchPlaceModel.events.FOCUS())}
-              onClick={(event) => send(searchPlaceModel.events.CLICK())}
+              value={value}
+              isLoading={query.isFetching}
+              onChange={Event.change}
+              onFocus={Event.focus}
+              onClick={Event.click}
               isInvalid={state.hasTag('isErrored')}
               isDisabled={state.hasTag('isDisabled')}
               error={state.context.errorMessage!}
               placeholder="Search your location"
               rightElement={
-                <If cond={state.hasTag('isDirty')}>
+                <If cond={Boolean(value)}>
                   <Then>
                     <Button
                       isDisabled={state.hasTag('isDisabled')}
                       variant={state.hasTag('isErrored') ? 'searchBoxErrored' : 'searchBox'}
                       p={1}
                       size="xs"
-                      onClick={() => send(searchPlaceModel.events.CLEAR())}
+                      onClick={Event.clear}
                     >
                       CLEAR
                     </Button>
@@ -124,14 +137,14 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
             }}
           >
             <List>
-              <If cond={state.context.places.length > 0}>
+              <If cond={query.places.length > 0}>
                 <Then>
-                  {state.context.places.map((place) => (
+                  {query.places.map((place) => (
                     <ListItem
                       key={place.place_id}
                       highlight={state.context.selected?.place_id === place.place_id}
                       onClick={(event) => {
-                        send(searchPlaceModel.events.SELECT(Number(place.place_id)));
+                        Event.select(Number(place.place_id));
                         props?.onSelect?.(place);
                       }}
                     >
