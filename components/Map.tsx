@@ -28,6 +28,7 @@ const Map: FC<MapProps> = () => {
             }))
           }
           showState
+          focusOnSelect
         />
       </Box>
       <ReactMapGL

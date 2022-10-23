@@ -13,6 +13,7 @@ import {
   startWith,
   Subject,
   switchMap,
+  tap,
   withLatestFrom,
 } from 'rxjs';
 import { fromFetch } from 'rxjs/internal/observable/dom/fetch';
@@ -70,7 +71,8 @@ const FETCH_OPTIONS = {
 
 // ========================================= SOURCE OBSERVABLES ===========================================
 const typings$ = new Subject<string>();
-const focuses$ = new Subject<void>();
+const focuses$ = new Subject<boolean>();
+const blur$ = new Subject<void>();
 const clicks$ = new Subject<void>();
 const selections$ = new Subject<Place['place_id']>();
 
@@ -125,6 +127,12 @@ const errors$ = requests$.pipe(
 const idle$ = values$.pipe(mapTo(STATUS.IDLE));
 
 const statuses$ = merge(notFound$, found$, idle$, loads$).pipe(distinctUntilChanged());
+
+const onFocus$ = merge(values$.pipe(mapTo(true)), blur$.pipe(mapTo(false)), focuses$).pipe(
+  distinctUntilChanged(),
+  filter((isFocus) => isFocus),
+);
+
 // ========================================= CUSTOM OPERATORS ===========================================
 
 function replaceTerm(searchValue: string | RegExp, replaceValue: string) {
@@ -145,12 +153,16 @@ function change(event: React.ChangeEvent<HTMLInputElement>) {
   typings$.next(event.target.value);
 }
 
-function focus(event: React.FocusEvent<HTMLInputElement>) {
-  focuses$.next();
+function focus(event?: React.FocusEvent<HTMLInputElement>) {
+  focuses$.next(true);
 }
 
 function click(event: React.MouseEvent<HTMLInputElement>) {
   clicks$.next();
+}
+
+function blur() {
+  blur$.next();
 }
 
 function clear() {
@@ -161,12 +173,16 @@ function select(placeId: Place['place_id']) {
   selections$.next(placeId);
 }
 
-function usePlaces() {
+function usePlaces(props: { onFocus: Function | undefined }) {
   const value = useObservable(values$, '');
   const places = useObservable(places$, []);
   const status = useObservable(statuses$, 'idle');
   const error = useObservable(errors$, null);
-  return { value, places, status, error, Event: { change, focus, click, clear, select } };
+
+  // @ts-ignore
+  useObservable(onFocus$.pipe(tap(props.onFocus)), false);
+
+  return { value, places, status, error, Event: { change, focus, click, blur, clear, select } };
 }
 
 export default { usePlaces };

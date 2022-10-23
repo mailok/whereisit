@@ -49,21 +49,8 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
     },
   });
 
-  useEffect(() => {
-    send(searchPlaceModel.events.CHANGE_CONFIG({ focusOnSelect: props.focusOnSelect }));
-  }, [props.focusOnSelect]);
-
-  useEffect(() => {
-    send(props.isDisabled ? searchPlaceModel.events.DISABLE() : searchPlaceModel.events.ENABLE());
-  }, [props.isDisabled]);
-
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
-
-  useOutsideClick({
-    ref: containerRef,
-    handler: () => send(searchPlaceModel.events.BLUR()),
-  });
 
   const colorSchema = state.hasTag('isChanging')
     ? 'orange'
@@ -79,7 +66,11 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
     ? 'red'
     : undefined;
 
-  const { value, places, status, error, Event } = Places.usePlaces();
+  const { value, places, status, error, Event } = Places.usePlaces({
+    onFocus: () => {
+      inputRef.current?.focus();
+    },
+  });
   const isErrored = Boolean(error);
 
   return (
@@ -105,15 +96,16 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
               onChange={Event.change}
               onFocus={Event.focus}
               onClick={Event.click}
+              onBlur={Event.blur}
               isInvalid={isErrored}
-              isDisabled={state.hasTag('isDisabled')}
+              isDisabled={props.isDisabled}
               error={error!}
               placeholder="Search your location"
               rightElement={
                 <If cond={Boolean(value)}>
                   <Then>
                     <Button
-                      isDisabled={state.hasTag('isDisabled')}
+                      isDisabled={props.isDisabled}
                       variant={isErrored ? 'searchBoxErrored' : 'searchBox'}
                       p={1}
                       size="xs"
@@ -146,6 +138,9 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
                       highlight={state.context.selected?.place_id === place.place_id}
                       onClick={(event) => {
                         Event.select(Number(place.place_id));
+                        if (props.focusOnSelect) {
+                          Event.focus();
+                        }
                         props?.onSelect?.(place);
                       }}
                     >
