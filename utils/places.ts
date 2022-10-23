@@ -80,14 +80,10 @@ const queries$ = typings$.pipe(waitForTerm(500), replaceTerm(' ', '+'), share())
 
 const requests$ = queries$.pipe(switchMap(fetchByTerm), startWith(DEFAULT), share());
 
-const loads$ = requests$.pipe(map((query) => query.isFetching));
-const places$ = requests$.pipe(
-  map((query) => query.places),
-  distinctUntilChanged(),
-);
-const errors$ = requests$.pipe(
-  map((query) => query.error),
-  distinctUntilChanged(),
+const loads$ = requests$.pipe(
+  map((query) => query.isFetching),
+  filter((isLoading) => isLoading),
+  mapTo(STATUS.LOADING),
 );
 
 const selectedPlaces$ = selections$.pipe(
@@ -97,8 +93,6 @@ const selectedPlaces$ = selections$.pipe(
   filter((name) => !!name.trim()),
 );
 
-const values$ = merge(typings$, selectedPlaces$);
-
 const emptyResponses$ = requests$.pipe(
   pairwise(),
   filter(([oldQuery, newQuery]) => oldQuery.isFetching && !newQuery.isFetching),
@@ -106,24 +100,31 @@ const emptyResponses$ = requests$.pipe(
   share(),
 );
 
-const statuses$ = merge(
-  emptyResponses$.pipe(
-    filter((hasPlaces) => hasPlaces),
-    mapTo(STATUS.NO_CONTENT_FOUND),
-  ),
-  emptyResponses$.pipe(
-    filter((hasPlaces) => !hasPlaces),
-    mapTo(STATUS.CONTENT_FOUND),
-  ),
-  values$.pipe(mapTo(STATUS.IDLE)),
-  loads$.pipe(
-    filter((isLoading) => isLoading),
-    mapTo(STATUS.LOADING),
-  ),
-).pipe(distinctUntilChanged());
+const notFound$ = emptyResponses$.pipe(
+  filter((hasPlaces) => hasPlaces),
+  mapTo(STATUS.NO_CONTENT_FOUND),
+);
+
+const found$ = emptyResponses$.pipe(
+  filter((hasPlaces) => !hasPlaces),
+  mapTo(STATUS.CONTENT_FOUND),
+);
 
 // ========================================= STATE OPERATORS ===========================================
+const values$ = merge(typings$, selectedPlaces$);
 
+const places$ = requests$.pipe(
+  map((query) => query.places),
+  distinctUntilChanged(),
+);
+const errors$ = requests$.pipe(
+  map((query) => query.error),
+  distinctUntilChanged(),
+);
+
+const idle$ = values$.pipe(mapTo(STATUS.IDLE));
+
+const statuses$ = merge(notFound$, found$, idle$, loads$).pipe(distinctUntilChanged());
 // ========================================= CUSTOM OPERATORS ===========================================
 
 function replaceTerm(searchValue: string | RegExp, replaceValue: string) {
