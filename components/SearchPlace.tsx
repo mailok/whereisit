@@ -20,7 +20,7 @@ import { Else, If, Then } from './utils';
 import Input from './Input';
 import { Search2Icon } from '@chakra-ui/icons';
 import searchPlaceMachine, { Place, searchPlaceModel } from '../machines/searchPlaceMachine';
-import Places from '../utils/places';
+import Places, { STATUS } from '../utils/places';
 
 interface SearchPlaceProps {
   focusOnSelect?: boolean;
@@ -79,7 +79,8 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
     ? 'red'
     : undefined;
 
-  const [value, query, Event] = Places.usePlaces();
+  const { value, places, status, error, Event } = Places.usePlaces();
+  const isErrored = Boolean(error);
 
   return (
     <VStack w="100%" spacing={2}>
@@ -92,7 +93,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
         <Popover
           autoFocus={false}
           returnFocusOnClose={false}
-          isOpen={!!query.places.length}
+          isOpen={status !== STATUS.IDLE && status !== STATUS.LOADING}
           placement="bottom-start"
           matchWidth
         >
@@ -100,20 +101,20 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
             <Input
               ref={inputRef}
               value={value}
-              isLoading={query.isFetching}
+              isLoading={status === STATUS.LOADING}
               onChange={Event.change}
               onFocus={Event.focus}
               onClick={Event.click}
-              isInvalid={state.hasTag('isErrored')}
+              isInvalid={isErrored}
               isDisabled={state.hasTag('isDisabled')}
-              error={state.context.errorMessage!}
+              error={error!}
               placeholder="Search your location"
               rightElement={
                 <If cond={Boolean(value)}>
                   <Then>
                     <Button
                       isDisabled={state.hasTag('isDisabled')}
-                      variant={state.hasTag('isErrored') ? 'searchBoxErrored' : 'searchBox'}
+                      variant={isErrored ? 'searchBoxErrored' : 'searchBox'}
                       p={1}
                       size="xs"
                       onClick={Event.clear}
@@ -137,9 +138,9 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
             }}
           >
             <List>
-              <If cond={query.places.length > 0}>
+              <If cond={status === STATUS.CONTENT_FOUND}>
                 <Then>
-                  {query.places.map((place) => (
+                  {places.map((place) => (
                     <ListItem
                       key={place.place_id}
                       highlight={state.context.selected?.place_id === place.place_id}
@@ -152,11 +153,11 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
                     </ListItem>
                   ))}
                 </Then>
-                <Else if={!state.hasTag('isErrored')}>
+                <Else if={!error && status === STATUS.NO_CONTENT_FOUND}>
                   <ListItem>No results were found!</ListItem>
                 </Else>
-                <Else if={state.hasTag('isErrored')}>
-                  <ListItemErrored>{state.context.errorMessage}</ListItemErrored>
+                <Else if={isErrored}>
+                  <ListItemErrored>{error}</ListItemErrored>
                 </Else>
               </If>
             </List>
