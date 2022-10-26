@@ -20,7 +20,8 @@ import { Else, If, Then } from './utils';
 import Input from './Input';
 import { Search2Icon } from '@chakra-ui/icons';
 import searchPlaceMachine, { Place, searchPlaceModel } from '../machines/searchPlaceMachine';
-import Places, { Status } from '../utils/places';
+import InputSearch from '../InputSearch/react';
+import { Status } from '../InputSearch';
 
 interface SearchPlaceProps {
   focusOnSelect?: boolean;
@@ -40,44 +41,37 @@ interface SearchPlaceProps {
  * */
 
 const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
-  const [state, send] = useMachine(searchPlaceMachine, {
-    devTools: true,
-    actions: {
-      focus: () => {
-        inputRef.current?.focus();
-      },
-    },
-  });
-
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const colorSchema = state.hasTag('isChanging')
-    ? 'orange'
-    : state.hasTag('isFetching')
-    ? 'teal'
-    : state.hasTag('isWaitingForSelection')
-    ? 'yellow'
-    : state.hasTag('isAnySuggestionSelected')
-    ? 'purple'
-    : state.hasTag('hasEmptyResult')
-    ? 'pink'
-    : state.hasTag('isErrored')
-    ? 'red'
-    : undefined;
-
-  const { value, places, status, error, Event } = Places.usePlaces({
+  const { value, places, status, placeSelected, error, Event } = InputSearch.usePlaces({
     onFocus: () => {
       inputRef.current?.focus();
     },
   });
   const isErrored = Boolean(error);
 
+  let colorSchema = isErrored
+    ? 'red'
+    : status === 'loading'
+    ? 'yellow'
+    : status === 'content_found'
+    ? 'green'
+    : status === 'no_content_found'
+    ? 'gray'
+    : undefined;
+
   return (
     <VStack w="100%" spacing={2}>
       <If cond={props.showState}>
         <Then>
-          <Badge colorScheme={colorSchema}>{JSON.stringify(state.value, null, 2)}</Badge>
+          <Badge colorScheme={colorSchema}>
+            {JSON.stringify(
+              { value, placesLength: places.length, status, error: error ? `${error.slice(0, 10)}...` : error },
+              null,
+              2,
+            )}
+          </Badge>
         </Then>
       </If>
       <VStack w="100%" spacing={0} align="stretch" ref={containerRef}>
@@ -135,7 +129,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
                   {places.map((place) => (
                     <ListItem
                       key={place.place_id}
-                      highlight={state.context.selected?.place_id === place.place_id}
+                      highlight={placeSelected === place.display_name}
                       onClick={(event) => {
                         Event.select(Number(place.place_id));
                         if (props.focusOnSelect) {
