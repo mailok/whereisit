@@ -1,10 +1,12 @@
 import {
   catchError,
-  debounceTime as waitForTerm,
+  debounceTime as waitAfterChanges,
   distinctUntilChanged,
   filter,
+  interval,
   map,
   merge,
+  MonoTypeOperatorFunction,
   Observable,
   of,
   pairwise,
@@ -13,11 +15,15 @@ import {
   startWith,
   Subject,
   switchMap,
+  take,
   tap,
+  UnaryFunction,
+  pluck,
   withLatestFrom,
+  iif,
 } from 'rxjs';
 import { fromFetch } from 'rxjs/internal/observable/dom/fetch';
-import { mapTo, useObservable } from './index';
+import { debug, mapTo, selectProperty, useObservable } from './index';
 import React from 'react';
 
 export interface Place {
@@ -41,11 +47,21 @@ type Query = {
   error: null | string;
 };
 
-export const STATUS = {
-  IDLE: 'idle',
-  NO_CONTENT_FOUND: 'no_content_found',
-  CONTENT_FOUND: 'content_found',
-  LOADING: 'loading',
+type Event =
+  | { type: 'change'; payload: string }
+  | { type: 'focus' }
+  | { type: 'click' }
+  | { type: 'blur' }
+  | { type: 'clear' }
+  | { type: 'select'; payload: Place['place_id'] };
+
+type ExtractEvent<T extends Event['type']> = Extract<Event, { type: T }>;
+
+export const Status = {
+  idle: 'idle',
+  noContentFound: 'no_content_found',
+  contentFound: 'content_found',
+  loading: 'loading',
 } as const;
 
 const LOADING: Query = {
@@ -54,7 +70,7 @@ const LOADING: Query = {
   error: null,
 };
 
-const DEFAULT: Query = {
+const defaultResponse: Query = {
   isFetching: false,
   places: [],
   error: null,
@@ -70,119 +86,132 @@ const FETCH_OPTIONS = {
 };
 
 // ========================================= SOURCE OBSERVABLES ===========================================
-const typings$ = new Subject<string>();
-const focuses$ = new Subject<boolean>();
-const blur$ = new Subject<void>();
-const clicks$ = new Subject<void>();
-const selections$ = new Subject<Place['place_id']>();
+const events = new Subject<Event>();
 
+const changes = events.pipe(filterByEvent('change'), selectPayload());
+const selections = events.pipe(filterByEvent('select'), selectPayload());
+const focuses = events.pipe(filterByEvent('focus'));
+const blurs = events.pipe(filterByEvent('blur'));
+const clicks = events.pipe(filterByEvent('click'));
+
+function fireEvent(event: Event) {
+  events.next(event);
+}
 // ========================================= INTERMEDIATE OBSERVABLES ===========================================
 
-const queries$ = typings$.pipe(waitForTerm(500), replaceTerm(' ', '+'), share());
+const queries = changes.pipe(waitAfterChanges(500), replaceCharacter(' ', '+'), share());
 
-const requests$ = queries$.pipe(switchMap(fetchByTerm), startWith(DEFAULT), share());
+const responses = queries.pipe(fetchPlaces(), startWith(defaultResponse), share());
 
-const loads$ = requests$.pipe(
-  map((query) => query.isFetching),
-  filter((isLoading) => isLoading),
-  mapTo(STATUS.LOADING),
-);
+const loads = responses.pipe(selectProperty('isFetching'), filter(truthyValues));
 
-const selectedPlaces$ = selections$.pipe(
-  withLatestFrom(requests$),
-  map(([id, query]) => query.places.find((place) => place.place_id === id)),
-  map((place) => (place ? place.display_name : '')),
-  filter((name) => !!name.trim()),
-);
+const selectedPlaces = selections.pipe(withLatestFrom(responses), mapPlaceById(), selectProperty('display_name'));
 
-const emptyResponses$ = requests$.pipe(
-  pairwise(),
-  filter(([oldQuery, newQuery]) => oldQuery.isFetching && !newQuery.isFetching),
-  map(([_, newQuery]) => !Boolean(newQuery.places.length)),
-  share(),
-);
-
-const notFound$ = emptyResponses$.pipe(
-  filter((hasPlaces) => hasPlaces),
-  mapTo(STATUS.NO_CONTENT_FOUND),
-);
-
-const found$ = emptyResponses$.pipe(
-  filter((hasPlaces) => !hasPlaces),
-  mapTo(STATUS.CONTENT_FOUND),
-);
+const results = responses.pipe(pairwise(), filter(doneRequests), map(isResponseEmpty), share());
 
 // ========================================= STATE OPERATORS ===========================================
-const values$ = merge(typings$, selectedPlaces$);
+const values = merge(changes, selectedPlaces);
 
-const places$ = requests$.pipe(
-  map((query) => query.places),
+const places = responses.pipe(selectProperty('places'), distinctUntilChanged());
+const errors = responses.pipe(selectProperty('error'), distinctUntilChanged());
+
+const statuses = merge(
+  values.pipe(mapTo(Status.idle)),
+  loads.pipe(mapTo(Status.loading)),
+  results.pipe(filter(truthyValues), mapTo(Status.noContentFound)),
+  results.pipe(filter(falsyValues), mapTo(Status.contentFound)),
+).pipe(distinctUntilChanged());
+
+const onFocus = merge(merge(values, focuses).pipe(mapTo(true)), blurs.pipe(mapTo(false))).pipe(
+  filter(truthyValues),
   distinctUntilChanged(),
-);
-const errors$ = requests$.pipe(
-  map((query) => query.error),
-  distinctUntilChanged(),
-);
-
-const idle$ = values$.pipe(mapTo(STATUS.IDLE));
-
-const statuses$ = merge(notFound$, found$, idle$, loads$).pipe(distinctUntilChanged());
-
-const onFocus$ = merge(values$.pipe(mapTo(true)), blur$.pipe(mapTo(false)), focuses$).pipe(
-  distinctUntilChanged(),
-  filter((isFocus) => isFocus),
 );
 
 // ========================================= CUSTOM OPERATORS ===========================================
 
-function replaceTerm(searchValue: string | RegExp, replaceValue: string) {
+function filterByEvent<T extends Event['type']>(eventType: T) {
+  return pipe(filter((event: Event): event is ExtractEvent<T> => event.type === eventType));
+}
+
+function selectPayload<T extends { payload: unknown }>() {
+  return pipe(selectProperty<T, 'payload'>('payload'));
+}
+
+function replaceCharacter(searchValue: string | RegExp, replaceValue: string) {
   return pipe(map((term: string) => (term || '').replaceAll(searchValue, replaceValue)));
 }
 
-function fetchByTerm(term: string): Observable<Query> {
-  if (!term.trim()) return of(DEFAULT);
+function fetchPlaces() {
+  return pipe(
+    switchMap((query: string) => {
+      if (!query.trim()) return of(defaultResponse);
 
-  return fromFetch(`https://nominatim.openstreetmap.org/search?format=json&q=${term}`, FETCH_OPTIONS).pipe(
-    map(TO_QUERY),
-    startWith(LOADING),
-    catchError(TO_ERROR),
+      return fromFetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`, FETCH_OPTIONS).pipe(
+        map(TO_QUERY),
+        startWith(LOADING),
+        catchError(TO_ERROR),
+      );
+    }),
   );
 }
 
+function mapPlaceById() {
+  return pipe(
+    map(([id, query]) => query.places.find((place: Place) => place.place_id === id)),
+    filter<Place>((foundPlace) => Boolean(foundPlace)),
+  );
+}
+
+function doneRequests([oldQuery, newQuery]: [Query, Query]) {
+  return oldQuery.isFetching && !newQuery.isFetching;
+}
+
+function isResponseEmpty([_, lastResponse]: [Query, Query]) {
+  return !Boolean(lastResponse.places.length);
+}
+
+function truthyValues(value: boolean) {
+  return value;
+}
+
+function falsyValues(value: boolean) {
+  return !value;
+}
+
 function change(event: React.ChangeEvent<HTMLInputElement>) {
-  typings$.next(event.target.value);
+  fireEvent({ type: 'change', payload: event.target.value });
 }
 
 function focus(event?: React.FocusEvent<HTMLInputElement>) {
-  focuses$.next(true);
+  fireEvent({ type: 'focus' });
 }
 
 function click(event: React.MouseEvent<HTMLInputElement>) {
-  clicks$.next();
+  fireEvent({ type: 'click' });
 }
 
 function blur() {
-  blur$.next();
+  fireEvent({ type: 'blur' });
 }
 
 function clear() {
-  typings$.next('');
+  fireEvent({ type: 'change', payload: '' });
 }
 
 function select(placeId: Place['place_id']) {
-  selections$.next(placeId);
+  fireEvent({ type: 'select', payload: placeId });
 }
 
 function usePlaces(props: { onFocus: Function | undefined }) {
-  const value = useObservable(values$, '');
-  const places = useObservable(places$, []);
-  const status = useObservable(statuses$, 'idle');
-  const error = useObservable(errors$, null);
+  const value = useObservable(values, '');
+  const data = useObservable(places, []);
+  const status = useObservable(statuses, 'idle');
+  const error = useObservable(errors, null);
 
   // @ts-ignore
-  useObservable(onFocus$.pipe(tap(props.onFocus)), false);
+  useObservable(onFocus.pipe(tap(props.onFocus)), false);
 
-  return { value, places, status, error, Event: { change, focus, click, blur, clear, select } };
+  return { value, places: data, status, error, Event: { change, focus, click, blur, clear, select } };
 }
 
 export default { usePlaces };

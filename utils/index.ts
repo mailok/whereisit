@@ -1,5 +1,5 @@
 import { EventObject } from 'xstate';
-import { map, Observable, pipe, Subject, tap } from 'rxjs';
+import { map, Observable, pipe, Subject, tap, UnaryFunction } from 'rxjs';
 import { useEffect, useState } from 'react';
 
 export function assertEventType<TE extends EventObject, TType extends TE['type']>(
@@ -32,6 +32,10 @@ export function debug(message: string) {
   return pipe(tap((value) => console.log(`[${message}]`, value)));
 }
 
-export function mapTo(value: any) {
+export function mapTo<E, P>(value: P): UnaryFunction<Observable<E>, Observable<P>> {
   return pipe(map(() => value));
+}
+
+export function selectProperty<E, P extends keyof E>(property: P): UnaryFunction<Observable<E>, Observable<E[P]>> {
+  return pipe(map((obj) => obj[property]));
 }

@@ -20,7 +20,7 @@ import { Else, If, Then } from './utils';
 import Input from './Input';
 import { Search2Icon } from '@chakra-ui/icons';
 import searchPlaceMachine, { Place, searchPlaceModel } from '../machines/searchPlaceMachine';
-import Places, { STATUS } from '../utils/places';
+import Places, { Status } from '../utils/places';
 
 interface SearchPlaceProps {
   focusOnSelect?: boolean;
@@ -84,7 +84,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
         <Popover
           autoFocus={false}
           returnFocusOnClose={false}
-          isOpen={status !== STATUS.IDLE && status !== STATUS.LOADING}
+          isOpen={status !== Status.idle && status !== Status.loading}
           placement="bottom-start"
           matchWidth
         >
@@ -92,7 +92,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
             <Input
               ref={inputRef}
               value={value}
-              isLoading={status === STATUS.LOADING}
+              isLoading={status === Status.loading}
               onChange={Event.change}
               onFocus={Event.focus}
               onClick={Event.click}
@@ -130,7 +130,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
             }}
           >
             <List>
-              <If cond={status === STATUS.CONTENT_FOUND}>
+              <If cond={status === Status.contentFound}>
                 <Then>
                   {places.map((place) => (
                     <ListItem
@@ -148,7 +148,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
                     </ListItem>
                   ))}
                 </Then>
-                <Else if={!error && status === STATUS.NO_CONTENT_FOUND}>
+                <Else if={!error && status === Status.noContentFound}>
                   <ListItem>No results were found!</ListItem>
                 </Else>
                 <Else if={isErrored}>
