@@ -43,14 +43,15 @@ const responses = queries.pipe(fetchPlaces(), startWith(createQuery()), share())
 const loads = responses.pipe(select('isFetching'));
 
 const selectedPlaces = merge(selections.pipe(withLatestFrom(responses), mapPlaceById()), changes.pipe(mapTo(null)));
+const selectedNames = selectedPlaces.pipe(filter(Boolean), select('display_name'));
 
-const values = merge(changes, selectedPlaces.pipe(filter(truthyValues), select('display_name')));
+const values = merge(changes, selectedNames);
 
 const places = responses.pipe(select('places'), distinctUntilChanged());
 const errors = merge(values.pipe(mapTo(null)), responses.pipe(select('error')).pipe(distinctUntilChanged()));
 
 const focus = merge(merge(values, focuses).pipe(mapTo(true)), blurs.pipe(mapTo(false))).pipe(
-  filter(truthyValues),
+  filter(Boolean),
   distinctUntilChanged(),
 );
 
@@ -67,14 +68,6 @@ function doneRequests([oldQuery, newQuery]: [Query, Query]) {
 
 function somethingToShow([_, query]: [any, Query]) {
   return Boolean(query.places.length) || Boolean(query.error);
-}
-
-function truthyValues(value: any) {
-  return Boolean(value);
-}
-
-function falsyValues(value: boolean) {
-  return !value;
 }
 
 export default { values, places, errors, showingResults, loads, selectedPlaces, focus, fireEvent };
