@@ -13,6 +13,7 @@ import {
   Text,
   useColorModeValue,
   VStack,
+  useOutsideClick,
 } from '@chakra-ui/react';
 import { Else, If, Then } from './utils';
 import Input from './Input';
@@ -38,6 +39,11 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
   });
   const isErrored = Boolean(error);
 
+  useOutsideClick({
+    ref: containerRef,
+    handler: Event.blur,
+  });
+
   let colorSchema = isErrored
     ? 'red'
     : isLoading
@@ -45,7 +51,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
     : isPopOverOpen && Boolean(places.length)
     ? 'green'
     : isPopOverOpen && !Boolean(places.length)
-    ? 'gray'
+    ? 'teal'
     : undefined;
 
   return (
@@ -83,7 +89,6 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
               onChange={Event.change}
               onFocus={Event.focus}
               onClick={Event.click}
-              onBlur={Event.blur}
               isInvalid={isErrored}
               isDisabled={props.isDisabled}
               error={error!}
