@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
-import { useMachine } from '@xstate/react';
+import React from 'react';
 import {
   Badge,
   Button,
@@ -13,15 +12,13 @@ import {
   SlideFade,
   Text,
   useColorModeValue,
-  useOutsideClick,
   VStack,
 } from '@chakra-ui/react';
 import { Else, If, Then } from './utils';
 import Input from './Input';
 import { Search2Icon } from '@chakra-ui/icons';
-import searchPlaceMachine, { Place, searchPlaceModel } from '../machines/searchPlaceMachine';
 import InputSearch from '../InputSearch/react';
-import { Status } from '../InputSearch';
+import { Place } from '../InputSearch/types';
 
 interface SearchPlaceProps {
   focusOnSelect?: boolean;
@@ -30,21 +27,11 @@ interface SearchPlaceProps {
   onSelect?: (place: Place) => void;
 }
 
-/**
- *
- *
- *
- *
- *
- *
- *
- * */
-
 const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const { value, places, status, placeSelected, error, Event } = InputSearch.usePlaces({
+  const { value, places, isLoading, isPopOverOpen, placeSelected, error, Event } = InputSearch.usePlaces({
     onFocus: () => {
       inputRef.current?.focus();
     },
@@ -53,11 +40,11 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
 
   let colorSchema = isErrored
     ? 'red'
-    : status === 'loading'
+    : isLoading
     ? 'yellow'
-    : status === 'content_found'
+    : isPopOverOpen && Boolean(places.length)
     ? 'green'
-    : status === 'no_content_found'
+    : isPopOverOpen && !Boolean(places.length)
     ? 'gray'
     : undefined;
 
@@ -67,7 +54,13 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
         <Then>
           <Badge colorScheme={colorSchema}>
             {JSON.stringify(
-              { value, placesLength: places.length, status, error: error ? `${error.slice(0, 10)}...` : error },
+              {
+                value: value.length > 10 ? `${value.slice(0, 10)}...` : value,
+                placesLength: places.length,
+                isLoading,
+                isPopOverOpen,
+                error: error ? `${error.slice(0, 10)}...` : error,
+              },
               null,
               2,
             )}
@@ -78,7 +71,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
         <Popover
           autoFocus={false}
           returnFocusOnClose={false}
-          isOpen={status !== Status.idle && status !== Status.loading}
+          isOpen={isPopOverOpen}
           placement="bottom-start"
           matchWidth
         >
@@ -86,7 +79,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
             <Input
               ref={inputRef}
               value={value}
-              isLoading={status === Status.loading}
+              isLoading={isLoading}
               onChange={Event.change}
               onFocus={Event.focus}
               onClick={Event.click}
@@ -124,12 +117,12 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
             }}
           >
             <List>
-              <If cond={status === Status.contentFound}>
+              <If cond={Boolean(places.length)}>
                 <Then>
                   {places.map((place) => (
                     <ListItem
                       key={place.place_id}
-                      highlight={placeSelected === place.display_name}
+                      highlight={placeSelected?.place_id === place.place_id}
                       onClick={(event) => {
                         Event.select(Number(place.place_id));
                         if (props.focusOnSelect) {
@@ -142,7 +135,7 @@ const SearchPlace: React.FC<SearchPlaceProps> = (props) => {
                     </ListItem>
                   ))}
                 </Then>
-                <Else if={!error && status === Status.noContentFound}>
+                <Else if={!error && !Boolean(places.length)}>
                   <ListItem>No results were found!</ListItem>
                 </Else>
                 <Else if={isErrored}>

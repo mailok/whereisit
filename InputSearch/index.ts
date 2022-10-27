@@ -21,13 +21,6 @@ import {
   selectPayload,
 } from './custom-operators';
 
-export const Status = {
-  idle: 'idle',
-  noContentFound: 'no_content_found',
-  contentFound: 'content_found',
-  loading: 'loading',
-} as const;
-
 // ========================================= SOURCE OBSERVABLES ===========================================
 const events = new Subject<Event>();
 
@@ -46,38 +39,34 @@ const queries = changes.pipe(waitAfterChanges(500), replaceCharacter(' ', '+'), 
 
 const responses = queries.pipe(fetchPlaces(), startWith(createQuery()), share());
 
-const loads = responses.pipe(select('isFetching'), filter(truthyValues));
-
-const results = responses.pipe(pairwise(), filter(doneRequests), map(isResponseEmpty), share());
-
 // ========================================= STATE OPERATORS ===========================================
-const selectedPlaces = selections.pipe(withLatestFrom(responses), mapPlaceById(), select('display_name'));
+const loads = responses.pipe(select('isFetching'));
 
-const values = merge(changes, selectedPlaces);
+const selectedPlaces = selections.pipe(withLatestFrom(responses), mapPlaceById());
+
+const values = merge(changes, selectedPlaces.pipe(select('display_name')));
 
 const places = responses.pipe(select('places'), distinctUntilChanged());
 const errors = merge(values.pipe(mapTo(null)), responses.pipe(select('error')).pipe(distinctUntilChanged()));
-
-const statuses = merge(
-  values.pipe(mapTo(Status.idle)),
-  loads.pipe(mapTo(Status.loading)),
-  results.pipe(filter(truthyValues), mapTo(Status.noContentFound)),
-  results.pipe(filter(falsyValues), mapTo(Status.contentFound)),
-).pipe(distinctUntilChanged());
 
 const focus = merge(merge(values, focuses).pipe(mapTo(true)), blurs.pipe(mapTo(false))).pipe(
   filter(truthyValues),
   distinctUntilChanged(),
 );
 
+const showingResults = merge(
+  clicks.pipe(withLatestFrom(responses), map(somethingToShow)),
+  responses.pipe(pairwise(), filter(doneRequests), mapTo(true)),
+  merge(blurs, values).pipe(mapTo(false)),
+).pipe(startWith(false), distinctUntilChanged());
 // ====================================================================================
 
 function doneRequests([oldQuery, newQuery]: [Query, Query]) {
   return oldQuery.isFetching && !newQuery.isFetching;
 }
 
-function isResponseEmpty([_, lastResponse]: [Query, Query]) {
-  return !Boolean(lastResponse.places.length);
+function somethingToShow([_, query]: [any, Query]) {
+  return Boolean(query.places.length) || Boolean(query.error);
 }
 
 function truthyValues(value: boolean) {
@@ -88,4 +77,4 @@ function falsyValues(value: boolean) {
   return !value;
 }
 
-export default { values, places, errors, statuses, selectedPlaces, focus, fireEvent };
+export default { values, places, errors, showingResults, loads, selectedPlaces, focus, fireEvent };

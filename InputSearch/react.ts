@@ -31,9 +31,10 @@ function select(placeId: Place['place_id']) {
 function usePlaces(props: { onFocus: Function | undefined }) {
   const value = useObservable(InputSearch.values, '');
   const data = useObservable(InputSearch.places, []);
-  const status = useObservable(InputSearch.statuses, 'idle');
+  const isLoading = useObservable(InputSearch.loads, false);
   const error = useObservable(InputSearch.errors, null);
-  const placeSelected = useObservable(InputSearch.selectedPlaces, '');
+  const placeSelected = useObservable(InputSearch.selectedPlaces, null);
+  const isPopOverOpen = useObservable(InputSearch.showingResults, false);
 
   useObservable(
     InputSearch.focus.pipe(
@@ -44,7 +45,15 @@ function usePlaces(props: { onFocus: Function | undefined }) {
     false,
   );
 
-  return { value, places: data, status, placeSelected, error, Event: { change, focus, click, blur, clear, select } };
+  return {
+    value,
+    places: data,
+    isLoading,
+    placeSelected,
+    isPopOverOpen,
+    error,
+    Event: { change, focus, click, blur, clear, select },
+  };
 }
 
 export default { usePlaces };
