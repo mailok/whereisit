@@ -42,9 +42,9 @@ const responses = queries.pipe(fetchPlaces(), startWith(createQuery()), share())
 // ========================================= STATE OPERATORS ===========================================
 const loads = responses.pipe(select('isFetching'));
 
-const selectedPlaces = selections.pipe(withLatestFrom(responses), mapPlaceById());
+const selectedPlaces = merge(selections.pipe(withLatestFrom(responses), mapPlaceById()), changes.pipe(mapTo(null)));
 
-const values = merge(changes, selectedPlaces.pipe(select('display_name')));
+const values = merge(changes, selectedPlaces.pipe(filter(truthyValues), select('display_name')));
 
 const places = responses.pipe(select('places'), distinctUntilChanged());
 const errors = merge(values.pipe(mapTo(null)), responses.pipe(select('error')).pipe(distinctUntilChanged()));
@@ -69,8 +69,8 @@ function somethingToShow([_, query]: [any, Query]) {
   return Boolean(query.places.length) || Boolean(query.error);
 }
 
-function truthyValues(value: boolean) {
-  return value;
+function truthyValues(value: any) {
+  return Boolean(value);
 }
 
 function falsyValues(value: boolean) {
